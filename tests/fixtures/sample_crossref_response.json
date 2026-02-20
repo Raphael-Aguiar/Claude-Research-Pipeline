@@ -1,0 +1,22 @@
+{
+  "status": "ok",
+  "message-type": "work",
+  "message": {
+    "DOI": "10.1186/s12913-023-09876-5",
+    "title": ["Artificial Intelligence in Hospital Management: A Systematic Review"],
+    "type": "journal-article",
+    "author": [
+      {"given": "João", "family": "Silva"},
+      {"given": "Maria", "family": "Santos"},
+      {"given": "Roberto", "family": "Costa"}
+    ],
+    "container-title": ["BMC Health Services Research"],
+    "published-print": {"date-parts": [[2023, 6, 15]]},
+    "volume": "23",
+    "issue": "1",
+    "page": "100-115",
+    "is-referenced-by-count": 42,
+    "update-to": [],
+    "assertion": []
+  }
+}

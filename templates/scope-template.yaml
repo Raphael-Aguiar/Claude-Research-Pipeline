@@ -1,0 +1,105 @@
+# scope.yaml — {{PROJECT_NAME}}
+# Template para definição de escopo do pipeline de pesquisa acadêmica.
+# Edite os campos abaixo conforme seu projeto.
+#
+# Referência: ~/escrita/tools/README.md
+
+# Nome do projeto (deve corresponder à pasta em ~/escrita/)
+project_name: "{{PROJECT_NAME}}"
+
+# Modalidade do pipeline:
+#   pesquisa-base          — revisão-base concisa para subsidiar escrita
+#   revisao-integrativa    — revisão integrativa como produto final
+#   revisao-sistematica    — revisão sistemática com protocolo rigoroso
+#   revisao-escopo         — revisão de escopo para mapear evidências
+modality: {{MODALITY}}
+
+# Pergunta de pesquisa
+# pesquisa-base: tópico geral
+# revisao-integrativa: pergunta estruturada
+# revisao-sistematica: PICO/SPIDER formalizado
+# revisao-escopo: PCC formalizado
+research_question: ""
+
+# Blocos de keywords combinados com AND (termos dentro de cada bloco com OR)
+# Exemplo: (bloco A) AND (bloco B) AND (bloco C)
+keyword_blocks:
+  - concept: "conceito principal"
+    terms:
+      - "termo1"
+      - "term1 english"
+  - concept: "domínio"
+    terms:
+      - "termo2"
+      - "term2 english"
+  - concept: "aplicação"
+    terms:
+      - "termo3"
+      - "term3 english"
+
+# Termos MeSH (PubMed) — opcional para pesquisa-base, recomendado para revisões
+mesh_terms: []
+
+# Critérios de inclusão
+inclusion_criteria:
+  - "artigos em inglês ou português"
+  - "publicados entre 2020 e 2026"
+
+# Critérios de exclusão
+exclusion_criteria:
+  - "artigos fora do escopo definido"
+
+# Período de publicação
+year_range: [2020, 2026]
+
+# Idiomas aceitos
+languages: ["en", "pt"]
+
+# APIs a consultar
+# Disponíveis: pubmed, openalex
+# Fase futura: semantic_scholar, europe_pmc
+apis: ["pubmed", "openalex"]
+
+# Máximo de resultados por API
+# Defaults por modalidade: pesquisa-base=100, integrativa=300, sistematica/escopo=500
+max_results_per_api: 100
+
+# Máximo de referências no output final (top-N após ranking)
+# Defaults: pesquisa-base=40, integrativa=80, sistematica/escopo=200
+max_final_refs: 40
+
+# Eixos de pesquisa — cada eixo agrupa keywords + sinônimos
+# keywords: usados na co-ocorrência multi-bloco
+# synonyms: usados no mapeamento ref→eixo (mais tolerante)
+research_axes:
+  - name: "Eixo 1"
+    keywords: ["keyword1", "keyword2"]
+    synonyms: ["synonym1", "synonym2"]
+  - name: "Eixo 2"
+    keywords: ["keyword3", "keyword4"]
+    synonyms: ["synonym3", "synonym4"]
+
+# DeCS terms (descritores BVS/LILACS) — opcional
+decs_terms: []
+
+# Keywords de exclusão (hard filter antes da triagem por relevância)
+# Referências que contenham estes termos no título são descartadas automaticamente
+exclusion_keywords: []
+
+# Keywords para triagem de relevância (etapa 6)
+# direct: relevância 2 (diretamente sobre o tema)
+# tangential: relevância 1 (toca no tema)
+# off_topic: relevância 0 (descartar)
+relevance_keywords:
+  direct:
+    - "keyword1"
+    - "keyword2"
+  tangential:
+    - "keyword3"
+    - "keyword4"
+  off_topic:
+    - "keyword_fora_escopo"
+
+# Framework de avaliação de qualidade (apenas para revisão sistemática)
+# Exemplos: GRADE, JBI, Cochrane_RoB2
+# quality_framework: null

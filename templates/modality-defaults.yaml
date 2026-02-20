@@ -1,0 +1,30 @@
+# Defaults por modalidade — carregados automaticamente quando
+# o scope.yaml não define um valor explícito.
+
+pesquisa-base:
+  apis: ["pubmed", "openalex"]
+  max_results_per_api: 100
+  max_final_refs: 40
+  year_range: [2020, 2026]
+  languages: ["en", "pt"]
+
+revisao-integrativa:
+  apis: ["pubmed", "openalex"]
+  max_results_per_api: 300
+  max_final_refs: 80
+  year_range: [2015, 2026]
+  languages: ["en", "pt", "es"]
+
+revisao-sistematica:
+  apis: ["pubmed", "openalex"]
+  max_results_per_api: 500
+  max_final_refs: 200
+  year_range: [2010, 2026]
+  languages: ["en", "pt", "es"]
+
+revisao-escopo:
+  apis: ["pubmed", "openalex"]
+  max_results_per_api: 500
+  max_final_refs: 200
+  year_range: [2010, 2026]
+  languages: ["en", "pt", "es"]

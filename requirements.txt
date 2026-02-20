@@ -1,0 +1,22 @@
+# Pipeline de Pesquisa Acadêmica — Dependências
+# Instalar: pip install -r requirements.txt
+
+# APIs acadêmicas
+biopython>=1.83        # Bio.Entrez (PubMed/NCBI)
+pyalex>=0.14           # OpenAlex API client
+habanero>=1.2          # CrossRef API client
+
+# Processamento de texto
+rapidfuzz>=3.6         # Fuzzy matching (dedup)
+
+# Extração de conteúdo
+docling>=2.0           # Extração de PDF (IBM, suporta 2 colunas, OCR, tabelas)
+beautifulsoup4>=4.12   # Parse de HTML para extração de artigos OA
+markdownify>=0.13      # Conversão HTML→Markdown
+
+# Infraestrutura
+requests>=2.31         # HTTP client
+pyyaml>=6.0            # Parser de scope.yaml
+
+# Testes
+pytest>=8.0

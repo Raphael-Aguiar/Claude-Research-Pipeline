@@ -1,0 +1,51 @@
+project_name: "Projeto Teste"
+modality: pesquisa-base
+research_question: "Quais são as aplicações de IA na gestão hospitalar?"
+
+keyword_blocks:
+  - concept: "tecnologia"
+    terms:
+      - "artificial intelligence"
+      - "machine learning"
+      - "big data"
+  - concept: "domínio"
+    terms:
+      - "hospital management"
+      - "healthcare administration"
+  - concept: "aplicação"
+    terms:
+      - "bed management"
+      - "fraud detection"
+
+mesh_terms:
+  - "Artificial Intelligence"
+  - "Hospital Administration"
+
+inclusion_criteria:
+  - "artigos em inglês ou português"
+  - "publicados entre 2020 e 2026"
+
+exclusion_criteria:
+  - "diagnóstico por imagem"
+  - "telemedicina"
+
+year_range: [2020, 2026]
+languages: ["en", "pt"]
+
+apis: ["pubmed", "openalex"]
+max_results_per_api: 50
+
+relevance_keywords:
+  direct:
+    - "hospital management"
+    - "bed management"
+    - "fraud detection"
+    - "gestão hospitalar"
+  tangential:
+    - "healthcare"
+    - "saúde"
+    - "hospital"
+  off_topic:
+    - "tuberculosis"
+    - "geriatrics"
+    - "waste management"
