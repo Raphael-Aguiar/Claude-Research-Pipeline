@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- run ---
     p_run = subparsers.add_parser("run", help="Executar pipeline completo")
-    p_run.add_argument("project", help="Nome do projeto (pasta em ~/escrita/)")
+    p_run.add_argument("project", help="Nome do projeto (pasta em ~/PKM/Escrita/)")
     p_run.add_argument(
         "--modality", "-m",
         choices=[m.value for m in Modality],

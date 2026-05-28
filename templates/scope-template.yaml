@@ -2,9 +2,9 @@
 # Template para definição de escopo do pipeline de pesquisa acadêmica.
 # Edite os campos abaixo conforme seu projeto.
 #
-# Referência: ~/escrita/tools/README.md
+# Referência: ~/bin/escrita-tooling/tools/README.md
 
-# Nome do projeto (deve corresponder à pasta em ~/escrita/)
+# Nome do projeto (deve corresponder à pasta em ~/PKM/Escrita/)
 project_name: "{{PROJECT_NAME}}"
 
 # Modalidade do pipeline:

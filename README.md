@@ -82,7 +82,7 @@ O pipeline opera em 4 modos, selecionados no `scope.yaml`:
 ## Instalação
 
 ```bash
-cd ~/escrita
+cd ~/PKM/Escrita
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r tools/requirements.txt
@@ -252,6 +252,6 @@ python -m pytest tools/tests/ -v
 
 ## Referências
 
-- Relatório de auditoria que motivou o pipeline: `~/escrita/Livro Editora Atheneu/relatorio-audit-deep-research.md`
-- Skills que usam este pipeline: `~/escrita/skills/pesquisa-academica/SKILL.md`, `~/escrita/skills/revisao-literatura/SKILL.md`
-- Decisões arquiteturais: `~/escrita/tools/DECISOES.md`
+- Relatório de auditoria que motivou o pipeline: `~/PKM/Escrita/Livro Editora Atheneu/relatorio-audit-deep-research.md`
+- Skills que usam este pipeline: `~/bin/escrita-tooling/skills/pesquisa-academica/SKILL.md`, `~/bin/escrita-tooling/skills/revisao-literatura/SKILL.md`
+- Decisões arquiteturais: `~/bin/escrita-tooling/tools/DECISOES.md`
