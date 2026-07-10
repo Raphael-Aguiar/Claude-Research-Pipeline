@@ -204,6 +204,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_prisma.add_argument("project", help="Nome do projeto")
 
+    p_semantic = subparsers.add_parser(
+        "semantic",
+        help="Re-ranqueamento + resgate semântico por embeddings (Ollama)",
+    )
+    p_semantic.add_argument("project", help="Nome do projeto")
+
     args = parser.parse_args(argv)
 
     if not args.command:
@@ -253,6 +259,8 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_screen_import(args)
         elif args.command == "prisma":
             return cmd_prisma(args)
+        elif args.command == "semantic":
+            return cmd_semantic(args)
     except Exception as e:
         print(f"\nERRO: {e}", file=sys.stderr)
         return 1
@@ -715,6 +723,59 @@ def cmd_prisma(args) -> int:
         return 1
     pipeline_dir = get_pipeline_dir(args.project)
     generate_prisma_flow(refs, config, pipeline_dir / "prisma-flow.md")
+    return 0
+
+
+def cmd_semantic(args) -> int:
+    """Aplica a camada semântica ao último checkpoint completo."""
+    import json as _json
+
+    from .semantic import apply_semantic_layer
+
+    config = load_scope(args.project)
+    refs = _load_latest_refs(args.project, prefer_full=True)
+    if not refs:
+        print("Nenhuma referência encontrada. Rode o pipeline antes.")
+        return 1
+
+    result = apply_semantic_layer(refs, config)
+    if not result["scored"]:
+        return 1
+
+    # Persistir scores no checkpoint completo
+    pipeline_dir = get_pipeline_dir(args.project)
+    for name in ("refs-verified.json", "refs-dedup.json"):
+        path = pipeline_dir / name
+        if path.exists():
+            by_id = {r.id: r for r in refs}
+            data = _json.loads(path.read_text(encoding="utf-8"))
+            for d in data.get("references", []):
+                r = by_id.get(d.get("id"))
+                if r and r.semantic_score is not None:
+                    d["semantic_score"] = r.semantic_score
+                    d["relevance"] = r.relevance.value
+                    d["relevance_method"] = r.relevance_method
+            path.write_text(
+                _json.dumps(data, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            print(f"  Scores persistidos em {name}")
+            break
+
+    # Top e resgates
+    scored = sorted(
+        (r for r in refs if r.semantic_score is not None and not r.is_duplicate),
+        key=lambda r: r.semantic_score, reverse=True,
+    )
+    print("\n  Top 5 por similaridade semântica:")
+    for r in scored[:5]:
+        print(f"    {r.semantic_score:.3f}  {r.title[:70]}")
+    rescued = [r for r in scored if "semantic_rescue" in r.relevance_method]
+    if rescued:
+        print(f"\n  Resgatadas ({len(rescued)}):")
+        for r in rescued[:10]:
+            print(f"    {r.semantic_score:.3f}  {r.title[:70]}")
+    print(f"\n  Próximo passo: python -m tools run \"{args.project}\" --from-stage 6")
     return 0
 
 

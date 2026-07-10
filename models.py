@@ -111,6 +111,9 @@ class Reference:
     llm_reason: str | None = None
     llm_criteria: list[str] = field(default_factory=list)  # ex: ["I1", "E2"]
 
+    # --- Busca semântica vetorial (etapa 6c — embeddings, Fase 3) ---
+    semantic_score: float | None = None  # cosseno consulta×ref (0-1)
+
     # --- Integridade (etapa 7) ---
     retracted: bool | None = None
     has_correction: bool | None = None
@@ -250,6 +253,7 @@ class Reference:
             "llm_verdict": self.llm_verdict,
             "llm_reason": self.llm_reason,
             "llm_criteria": self.llm_criteria,
+            "semantic_score": self.semantic_score,
             "retracted": self.retracted,
             "has_correction": self.has_correction,
             "access_status": self.access_status.value,
@@ -303,6 +307,7 @@ class Reference:
         ref.llm_verdict = data.get("llm_verdict")
         ref.llm_reason = data.get("llm_reason")
         ref.llm_criteria = data.get("llm_criteria", [])
+        ref.semantic_score = data.get("semantic_score")
         ref.relevance_method = data.get("relevance_method", "")
         ref.retracted = data.get("retracted")
         ref.has_correction = data.get("has_correction")
@@ -352,3 +357,7 @@ class SearchConfig:
     quality_framework: str | None = None
     # Áreas do Semantic Scholar (fieldsOfStudy); lista vazia = sem filtro
     fields_of_study: list[str] = field(default_factory=lambda: ["Medicine"])
+    # Busca semântica vetorial via Ollama (Fase 3) — opt-in no scope.yaml
+    semantic_rerank: bool = False
+    semantic_rescue_threshold: float = 0.60
+    semantic_weight: float = 8.0

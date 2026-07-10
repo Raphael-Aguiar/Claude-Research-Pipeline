@@ -258,3 +258,82 @@ class TestMeshLookupParse:
         out = mesh_lookup.suggest_mesh_descriptors("machine learning")
         assert out[0]["label"] == "Machine Learning"
         assert out[0]["exact"] is True
+
+
+class TestSemantic:
+    def test_cosine(self):
+        from tools.semantic import cosine
+        assert cosine([1, 0], [1, 0]) == 1.0
+        assert cosine([1, 0], [0, 1]) == 0.0
+        assert cosine([0, 0], [1, 1]) == 0.0
+
+    def test_query_text_inclui_pergunta_criterios_e_termos(self):
+        from tools.semantic import _build_query_text
+        config = SearchConfig(
+            research_question="IA na gestão hospitalar?",
+            inclusion_criteria=["estudos sobre gestão"],
+            keyword_blocks=[{"concept": "t", "terms": ["big data"]}],
+        )
+        q = _build_query_text(config)
+        assert "IA na gestão hospitalar?" in q
+        assert "estudos sobre gestão" in q
+        assert "big data" in q
+
+    def test_rescue_promove_no_match_mas_nao_exclusao_deliberada(self, monkeypatch):
+        from tools import semantic
+
+        def fake_scores(refs, config, *a, **k):
+            for r in refs:
+                r.semantic_score = 0.85
+            return len(refs)
+
+        monkeypatch.setattr(semantic, "compute_semantic_scores", fake_scores)
+
+        no_match = Reference(id="a", title="X")
+        no_match.relevance = Relevance.OFF_TOPIC
+        no_match.relevance_method = "no_match"
+        deliberate = Reference(id="b", title="Y")
+        deliberate.relevance = Relevance.OFF_TOPIC
+        deliberate.relevance_method = "exclusion_keyword"
+        alive = Reference(id="c", title="Z")
+        alive.relevance = Relevance.DIRECT
+        alive.relevance_score = 10.0
+
+        config = SearchConfig(semantic_rescue_threshold=0.70, semantic_weight=8.0)
+        result = semantic.apply_semantic_layer([no_match, deliberate, alive], config)
+
+        assert result["rescued"] == 1
+        assert no_match.relevance == Relevance.TANGENTIAL
+        assert "semantic_rescue" in no_match.relevance_method
+        assert deliberate.relevance == Relevance.OFF_TOPIC  # exclusão deliberada fica
+        assert alive.relevance_score == 10.0 + 0.85 * 8.0  # bônus aplicado
+
+    def test_score_abaixo_do_threshold_nao_resgata(self, monkeypatch):
+        from tools import semantic
+
+        def fake_scores(refs, config, *a, **k):
+            for r in refs:
+                r.semantic_score = 0.5
+            return len(refs)
+
+        monkeypatch.setattr(semantic, "compute_semantic_scores", fake_scores)
+        r = Reference(id="a", title="X")
+        r.relevance = Relevance.OFF_TOPIC
+        r.relevance_method = "no_match"
+        result = semantic.apply_semantic_layer([r], SearchConfig())
+        assert result["rescued"] == 0
+        assert r.relevance == Relevance.OFF_TOPIC
+
+    def test_ollama_indisponivel_degrada_gracioso(self, monkeypatch):
+        from tools import semantic
+        monkeypatch.setattr(semantic, "ollama_available", lambda *a: False)
+        r = Reference(id="a", title="X")
+        out = semantic.compute_semantic_scores([r], SearchConfig())
+        assert out == 0
+        assert r.semantic_score is None
+
+    def test_semantic_score_serializa(self):
+        r = Reference(id="a", title="X")
+        r.semantic_score = 0.77
+        restored = Reference.from_dict(r.to_dict())
+        assert restored.semantic_score == 0.77

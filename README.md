@@ -102,6 +102,29 @@ Gerado automaticamente na etapa 9 para modalidades de revisão
 (`pipeline/prisma-flow.md`, com diagrama Mermaid + contagens por base), ou
 sob demanda: `python -m tools prisma "Projeto"`.
 
+## Busca semântica vetorial (Fase 3)
+
+Camada opcional via Ollama local (modelo `bge-m3`, multilíngue). Duas funções:
+
+1. **Re-ranqueamento**: similaridade de cosseno consulta×referência vira bônus
+   no ranking (`semantic_weight`, default 8.0).
+2. **Resgate semântico**: referência descartada só por falta de match de
+   keyword (`no_match`) mas semanticamente próxima da consulta (≥ 0.60,
+   calibrado empiricamente) é promovida a TANGENTIAL com método
+   `semantic_rescue` — captura sinônimos que as keywords não previram.
+   Exclusões deliberadas (termo de exclusão, pub_type, não-revisão) NUNCA
+   são resgatadas.
+
+```bash
+# Opt-in no scope.yaml: semantic_rerank: true  (roda dentro da etapa 6)
+# Ou standalone sobre o último checkpoint:
+python -m tools semantic "Projeto"
+```
+
+Degradação graciosa: sem Ollama no ar, o pipeline segue sem a camada
+semântica, com aviso explícito. Config: `OLLAMA` local em `localhost:11434`
+com o modelo `bge-m3` puxado (`ollama pull bge-m3`).
+
 
 ## Pré-requisitos
 

@@ -166,6 +166,13 @@ def load_scope(project_name: str) -> SearchConfig:
     if "fields_of_study" in data:
         config.fields_of_study = data["fields_of_study"] or []
 
+    # Busca semântica vetorial (Fase 3) — opt-in
+    config.semantic_rerank = bool(data.get("semantic_rerank", False))
+    config.semantic_rescue_threshold = float(
+        data.get("semantic_rescue_threshold", 0.60)
+    )
+    config.semantic_weight = float(data.get("semantic_weight", 8.0))
+
     return config
 
 

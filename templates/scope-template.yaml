@@ -111,3 +111,10 @@ relevance_keywords:
 # Áreas do Semantic Scholar (fieldsOfStudy). Default: ["Medicine"].
 # Lista vazia [] remove o filtro (temas não-biomédicos).
 # fields_of_study: ["Medicine"]
+
+# Busca semântica vetorial (Fase 3) — requer Ollama local com bge-m3.
+# Re-ranqueia por similaridade de embeddings e RESGATA refs que as keywords
+# não capturaram (sinônimos, formulações imprevistas). Opt-in:
+# semantic_rerank: true
+# semantic_rescue_threshold: 0.60   # similaridade mínima para resgate (calibrado empiricamente)
+# semantic_weight: 8.0              # peso do bônus no ranking

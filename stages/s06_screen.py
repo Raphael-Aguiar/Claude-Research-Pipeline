@@ -175,6 +175,14 @@ def screen_references(
     # --- DETECTAR CANÔNICOS ---
     _detect_canonical(refs)
 
+    # --- CAMADA SEMÂNTICA (opt-in: semantic_rerank no scope.yaml) ---
+    # Re-ranqueamento por embeddings + resgate de refs que as keywords
+    # não capturaram. Depois do ranking (bônus aditivo), antes da
+    # validation-list (resgatadas aparecem para o revisor humano).
+    if config.semantic_rerank:
+        from ..semantic import apply_semantic_layer
+        apply_semantic_layer(refs, config)
+
     # Print stats
     unique = counts["total"]
     print(f"  → DIRECT: {counts['classified_direct']} ({counts['classified_direct']/unique*100:.0f}%)" if unique else "")
