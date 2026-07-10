@@ -10,8 +10,10 @@ import yaml
 from .models import Modality, ResearchAxis, SearchConfig
 
 # Diretórios base
-ESCRITA_DIR = Path.home() / "escrita"
-TOOLS_DIR = ESCRITA_DIR / "tools"
+# Textos/projetos vivem no vault (~/PKM/Escrita); o tooling vive onde este
+# pacote está instalado (~/bin/escrita-tooling) — modelo híbrido de 2026-05-28.
+ESCRITA_DIR = Path.home() / "PKM" / "Escrita"
+TOOLS_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = TOOLS_DIR / "templates"
 
 # HTTP defaults
@@ -32,10 +34,16 @@ def get_project_dir(project_name: str) -> Path:
     return ESCRITA_DIR / project_name
 
 
-def get_pipeline_dir(project_name: str) -> Path:
-    """Retorna o diretório de outputs do pipeline, criando se necessário."""
-    pipeline_dir = get_project_dir(project_name) / "pipeline"
-    pipeline_dir.mkdir(parents=True, exist_ok=True)
+def get_pipeline_dir(project_name: str, create: bool = True) -> Path:
+    """Retorna o diretório de outputs do pipeline.
+
+    Só cria o diretório se o projeto já existe — comandos read-only
+    (status) não devem materializar pastas para nomes errados.
+    """
+    project_dir = get_project_dir(project_name)
+    pipeline_dir = project_dir / "pipeline"
+    if create and project_dir.exists():
+        pipeline_dir.mkdir(exist_ok=True)
     return pipeline_dir
 
 

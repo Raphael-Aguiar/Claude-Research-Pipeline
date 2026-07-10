@@ -176,5 +176,6 @@ def _parse_bvs_doc(doc: dict, query: str) -> Reference | None:
         )
         return ref
 
-    except Exception:
+    except Exception as e:
+        print(f"    bvs_lilacs: registro descartado por erro de parsing ({e})")
         return None

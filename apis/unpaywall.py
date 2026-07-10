@@ -61,8 +61,8 @@ def check_open_access(
         result["best_oa_location"] = best_loc
         result["oa_url"] = best_loc.get("url_for_pdf") or best_loc.get("url") or ""
 
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"    Unpaywall: erro ao consultar {doi_clean} ({e})")
 
     return result
 

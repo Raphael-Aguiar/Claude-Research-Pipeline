@@ -82,6 +82,7 @@ class Reference:
     crossref_match: bool | None = None
     crossref_title_similarity: float | None = None
     authors_verified: bool | None = None
+    verified_via: str | None = None  # crossref | pubmed | doi.org | title-pubmed | title-crossref
     verified_authors: list[str] = field(default_factory=list)
     verified_journal: str | None = None
     verified_volume: str | None = None
@@ -116,6 +117,28 @@ class Reference:
     # --- Grade composta (calculada após etapas 5-8) ---
     grade: CompositeGrade = CompositeGrade.UNGRADED
 
+    def verification_pendencies(self) -> list[str]:
+        """Pendências de verificação que exigem revisão humana.
+
+        Princípio zero-trust: nenhuma pendência pode ser silenciosa.
+        Uma ref com pendência nunca recebe grade acima de BRONZE.
+        """
+        pendencies = []
+        if self.authors_verified is False:
+            pendencies.append("autores divergem da fonte autoritativa")
+        if self.doi_resolves is True and self.crossref_match is False:
+            pendencies.append(
+                "título diverge do registrado para o DOI "
+                f"(similaridade {self.crossref_title_similarity or 0:.0f})"
+            )
+        if not self.doi and not self.pmid and not self.verified_via:
+            pendencies.append(
+                "sem DOI/PMID e não verificada por título — verificar manualmente"
+            )
+        if self.doi_resolves is False:
+            pendencies.append("DOI não resolve (CrossRef e doi.org)")
+        return pendencies
+
     def compute_grade(self) -> CompositeGrade:
         """Calcula grade composta com base em tier, relevância e integridade.
 
@@ -124,6 +147,10 @@ class Reference:
         - T1-T2 + DIRECT (independente de acesso) → GOLD
         - T3 + DIRECT, ou T1-T2 + TANGENTIAL → SILVER
         - T3 + TANGENTIAL → BRONZE
+
+        v3 (zero-trust): pendência de verificação (autores divergentes,
+        título divergente, ref inverificável) limita a grade a BRONZE —
+        a ref só sobe após resolução humana da pendência.
 
         Acesso vira campo informativo (determina se o MD terá conteúdo
         completo ou apenas abstract). Papers canônicos mantêm grade.
@@ -140,6 +167,11 @@ class Reference:
             return self.grade
         if self.access_status == AccessStatus.BROKEN:
             self.grade = CompositeGrade.DISCARD
+            return self.grade
+
+        # Trava zero-trust: pendência de verificação limita a BRONZE
+        if self.verification_pendencies():
+            self.grade = CompositeGrade.BRONZE
             return self.grade
 
         is_high_tier = self.tier in (Tier.T1, Tier.T2)
@@ -191,6 +223,7 @@ class Reference:
             "crossref_match": self.crossref_match,
             "crossref_title_similarity": self.crossref_title_similarity,
             "authors_verified": self.authors_verified,
+            "verified_via": self.verified_via,
             "verified_authors": self.verified_authors,
             "verified_journal": self.verified_journal,
             "verified_volume": self.verified_volume,
@@ -240,6 +273,7 @@ class Reference:
         ref.crossref_match = data.get("crossref_match")
         ref.crossref_title_similarity = data.get("crossref_title_similarity")
         ref.authors_verified = data.get("authors_verified")
+        ref.verified_via = data.get("verified_via")
         ref.verified_authors = data.get("verified_authors", [])
         ref.verified_journal = data.get("verified_journal")
         ref.verified_volume = data.get("verified_volume")

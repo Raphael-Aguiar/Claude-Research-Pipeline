@@ -65,10 +65,11 @@ def validate_final(
                 "message": f"'{ref.title[:50]}' sem DOI nem URL",
             })
 
-    # Verificação 3: Re-verificar DOIs (amostra)
-    dois_to_recheck = [r for r in final_refs if r.doi][:20]
+    # Verificação 3: Re-verificar TODOS os DOIs finais (zero-trust:
+    # amostragem não garante nada — o conjunto final é verificado inteiro)
+    dois_to_recheck = [r for r in final_refs if r.doi]
     doi_failures = 0
-    for ref in dois_to_recheck:
+    for i, ref in enumerate(dois_to_recheck, 1):
         try:
             result = verify_doi(ref.doi, email=email)
             if not result["resolves"]:
@@ -79,11 +80,13 @@ def validate_final(
                     "message": f"DOI {ref.doi} não resolve mais",
                 })
             time.sleep(0.1)
-        except Exception:
-            pass
+            if i % 25 == 0:
+                print(f"    → {i}/{len(dois_to_recheck)} DOIs re-verificados...")
+        except Exception as e:
+            print(f"    → ERRO ao re-verificar DOI {ref.doi}: {e}")
 
-    # Verificação 4: Re-verificar URLs (amostra)
-    urls_to_recheck = [r for r in final_refs if r.url][:20]
+    # Verificação 4: Re-verificar TODAS as URLs finais
+    urls_to_recheck = [r for r in final_refs if r.url]
     url_failures = 0
     for ref in urls_to_recheck:
         try:
@@ -95,16 +98,24 @@ def validate_final(
                     "type": "url_broken",
                     "message": f"URL quebrada: {ref.url}",
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"    → ERRO ao re-verificar URL {ref.url}: {e}")
 
-    # Verificação 5: Consistência de grades
+    # Verificação 5: Consistência de grades (inclui campos de verificação —
+    # a trava zero-trust do compute_grade depende deles)
     for ref in final_refs:
         recomputed = Reference(
             tier=ref.tier,
             relevance=ref.relevance,
             access_status=ref.access_status,
             retracted=ref.retracted,
+            doi=ref.doi,
+            pmid=ref.pmid,
+            doi_resolves=ref.doi_resolves,
+            crossref_match=ref.crossref_match,
+            crossref_title_similarity=ref.crossref_title_similarity,
+            authors_verified=ref.authors_verified,
+            verified_via=ref.verified_via,
         )
         recomputed.compute_grade()
         if recomputed.grade != ref.grade:

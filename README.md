@@ -47,7 +47,7 @@ Refs verificadas
 | Etapa | Módulo | O que faz |
 |---|---|---|
 | 1 | `s01_scope` | Carrega `scope.yaml` → `SearchConfig` |
-| 2 | `s02_search` | Busca em PubMed + OpenAlex → `refs-raw.json` |
+| 2 | `s02_search` | Busca nas APIs do `scope.yaml` — implementadas: PubMed, OpenAlex, Semantic Scholar, Europe PMC, BVS/LILACS (experimental) → `refs-raw.json` |
 | 3 | `s03_normalize` | Dedup: DOI exato + fuzzy(título+ano+autor, 85%) → `refs-dedup.json` |
 | 4 | `s04_verify` | CrossRef: DOI resolve? Título confere? → `refs-verified.json` |
 | 5 | `s05_classify` | TIER_MAP (~200 domínios) + CrossRef pub_type → Tier |
@@ -82,7 +82,7 @@ O pipeline opera em 4 modos, selecionados no `scope.yaml`:
 ## Instalação
 
 ```bash
-cd ~/PKM/Escrita
+cd ~/bin/escrita-tooling
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r tools/requirements.txt
@@ -91,6 +91,10 @@ pip install -r tools/requirements.txt
 cp tools/config.example.env tools/.env
 # Editar tools/.env com seus dados
 ```
+
+**Layout de diretórios (modelo híbrido, 2026-05-28):** o código vive em
+`~/bin/escrita-tooling/`; os projetos (textos, `scope.yaml`, outputs
+`pipeline/`) vivem no vault, em `~/PKM/Escrita/<Projeto>/`.
 
 
 ## Como usar
@@ -182,6 +186,8 @@ mesh_terms:
 
 year_range: [2020, 2026]
 languages: ["en", "pt"]
+# Implementadas: pubmed, openalex, semantic_scholar, europe_pmc, bvs_lilacs (experimental).
+# Os defaults de modalidade ativam só pubmed+openalex — amplie aqui conforme o rigor exigido.
 apis: ["pubmed", "openalex"]
 max_results_per_api: 100
 
@@ -227,7 +233,7 @@ TIER_MAP["novo-periodico.com"] = 1  # Tier 1
 
 ### Ajustar thresholds
 
-- Fuzzy matching de títulos: `FUZZY_THRESHOLD` em `stages/s03_normalize.py` (default: 85)
+- Fuzzy matching de títulos: `FUZZY_THRESHOLD` em `stages/s03_normalize.py` (default: 90; pares 80-89 são logados como suspeitos para revisão manual)
 - Título vs CrossRef: threshold de 80 em `apis/crossref.py`
 
 
@@ -252,6 +258,6 @@ python -m pytest tools/tests/ -v
 
 ## Referências
 
-- Relatório de auditoria que motivou o pipeline: `~/PKM/Escrita/Livro Editora Atheneu/relatorio-audit-deep-research.md`
+- Relatório de auditoria que motivou o pipeline: `~/PKM/Escrita/Livro Editora Atheneu/Deep Researches (Antigas)/relatorio-audit-deep-research.md`
 - Skills que usam este pipeline: `~/bin/escrita-tooling/skills/pesquisa-academica/SKILL.md`, `~/bin/escrita-tooling/skills/revisao-literatura/SKILL.md`
 - Decisões arquiteturais: `~/bin/escrita-tooling/tools/DECISOES.md`

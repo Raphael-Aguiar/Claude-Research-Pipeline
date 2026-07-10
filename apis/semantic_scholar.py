@@ -252,5 +252,6 @@ def _parse_paper(paper: dict, query: str) -> Reference | None:
         )
         return ref
 
-    except Exception:
+    except Exception as e:
+        print(f"    semantic_scholar: registro descartado por erro de parsing ({e})")
         return None

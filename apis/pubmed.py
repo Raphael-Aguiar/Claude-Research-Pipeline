@@ -195,6 +195,52 @@ def search_pubmed(
     return references
 
 
+def find_pmid_by_title(
+    title: str,
+    email: str,
+    year: int | None = None,
+) -> str | None:
+    """Busca PMID pelo título exato (campo [Title]) no PubMed.
+
+    Usado para verificar referências sem DOI. Retorna o PMID apenas se
+    o título do resultado tiver similaridade fuzzy >= 90 com o buscado
+    (e ano compatível ±1, quando informado); caso contrário, None.
+    """
+    if not email or not title:
+        return None
+    Entrez.email = email
+
+    from rapidfuzz import fuzz
+
+    try:
+        handle = Entrez.esearch(
+            db="pubmed",
+            term=f"{title}[Title]",
+            retmax=3,
+        )
+        result = Entrez.read(handle)
+        handle.close()
+        time.sleep(0.34)
+    except Exception as e:
+        print(f"    PubMed find_pmid_by_title: erro na busca ({e})")
+        return None
+
+    for candidate_pmid in result.get("IdList", []):
+        meta = fetch_pubmed_metadata(pmid=candidate_pmid, email=email)
+        if not meta:
+            continue
+        similarity = fuzz.ratio(
+            title.lower().strip(), meta["title"].lower().strip()
+        )
+        if similarity < 90:
+            continue
+        if year and meta.get("year", "").isdigit():
+            if abs(int(meta["year"]) - year) > 1:
+                continue
+        return candidate_pmid
+    return None
+
+
 def fetch_pubmed_metadata(
     doi: str | None = None,
     pmid: str | None = None,

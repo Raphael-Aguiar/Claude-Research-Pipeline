@@ -186,5 +186,6 @@ def _parse_europe_pmc_result(item: dict, query: str) -> Reference | None:
         )
         return ref
 
-    except Exception:
+    except Exception as e:
+        print(f"    europe_pmc: registro descartado por erro de parsing ({e})")
         return None

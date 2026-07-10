@@ -16,6 +16,7 @@ from rapidfuzz import fuzz
 from ..apis.crossref import (
     extract_authors_from_crossref,
     extract_journal_from_crossref,
+    find_doi_by_title,
     verify_doi,
 )
 from ..config import get_api_config, get_pipeline_dir
@@ -157,6 +158,38 @@ def _is_abbreviation_of(abbrev: str, full: str) -> bool:
     return matched >= len(abbrev_words) * 0.8
 
 
+def _rescue_by_title(ref: Reference, pm_email: str, cr_email: str) -> None:
+    """Tenta obter DOI/PMID para uma ref sem identificador, via título.
+
+    Ordem: PubMed [Title] → CrossRef query. Match exige similaridade
+    fuzzy >= 90 e ano compatível (±1). Se falhar, registra pendência
+    explícita — a ref fica limitada a BRONZE pelo compute_grade.
+    """
+    from ..apis.pubmed import find_pmid_by_title
+
+    if pm_email:
+        pmid = find_pmid_by_title(ref.title, email=pm_email, year=ref.year)
+        if pmid:
+            ref.pmid = pmid
+            ref.verified_via = "title-pubmed"
+            print(f"    ✓ PMID {pmid} encontrado por título: {ref.title[:60]}")
+            return
+
+    item = find_doi_by_title(ref.title, year=ref.year, email=cr_email)
+    if item and item.get("DOI"):
+        ref.doi = item["DOI"]
+        ref.verified_via = "title-crossref"
+        print(f"    ✓ DOI {ref.doi} encontrado por título: {ref.title[:60]}")
+        return
+
+    note = (
+        "Sem DOI/PMID e título não localizado no PubMed/CrossRef — "
+        "verificação manual obrigatória antes de citar"
+    )
+    if note not in ref.verification_issues:
+        ref.verification_issues.append(note)
+
+
 def verify_references(
     refs: list[Reference],
     project_name: str,
@@ -180,8 +213,17 @@ def verify_references(
     cr_email = api_config.get("CROSSREF_EMAIL", "")
     pm_email = api_config.get("NCBI_EMAIL", "")
 
-    to_verify = [r for r in refs if not r.is_duplicate and r.doi]
-    print(f"\n  Verificando {len(to_verify)} referências com DOI...")
+    # Resgate por título: refs sem DOI e sem PMID tentam ganhar um
+    # identificador via busca por título (PubMed → CrossRef). Sem isso,
+    # escapariam de toda a verificação (furo do zero-trust).
+    no_id = [r for r in refs if not r.is_duplicate and not r.doi and not r.pmid]
+    if no_id:
+        print(f"\n  Resgatando {len(no_id)} referências sem DOI/PMID por título...")
+        for ref in no_id:
+            _rescue_by_title(ref, pm_email, cr_email)
+
+    to_verify = [r for r in refs if not r.is_duplicate and (r.doi or r.pmid)]
+    print(f"\n  Verificando {len(to_verify)} referências com DOI/PMID...")
 
     stats = {
         "verified": 0, "resolved": 0, "titles_matched": 0,
@@ -193,12 +235,15 @@ def verify_references(
 
     for ref in to_verify:
         try:
-            # Passo 1: Verificar DOI no CrossRef
+            # Passo 1: Verificar DOI no CrossRef (com fallback doi.org)
             result = verify_doi(ref.doi, expected_title=ref.title, email=cr_email)
 
-            ref.doi_resolves = result["resolves"]
-            ref.crossref_match = result["title_match"]
-            ref.crossref_title_similarity = result["title_similarity"]
+            if ref.doi:
+                ref.doi_resolves = result["resolves"]
+                ref.crossref_match = result["title_match"]
+                ref.crossref_title_similarity = result["title_similarity"]
+                if result.get("resolver") == "doi.org":
+                    ref.verified_via = "doi.org"
 
             if result["resolves"]:
                 stats["resolved"] += 1
@@ -215,7 +260,7 @@ def verify_references(
             # Prioridade: PubMed (mais confiável para biomédicos) > CrossRef
             authoritative = None
 
-            if pm_email and result["resolves"]:
+            if pm_email and (result["resolves"] or ref.pmid):
                 from ..apis.pubmed import fetch_pubmed_metadata
 
                 pm_meta = fetch_pubmed_metadata(
@@ -246,6 +291,7 @@ def verify_references(
 
             # Passo 3: Comparar metadados
             if authoritative:
+                ref.verified_via = authoritative.get("source") or ref.verified_via
                 verified_authors = authoritative["authors"]
                 ref.verified_authors = verified_authors
                 ref.verified_journal = (
@@ -313,7 +359,15 @@ def verify_references(
                         "verified_authors": verified_authors[:6],
                     })
             else:
+                # Zero-trust: ausência de fonte autoritativa NÃO é aprovação —
+                # registrar pendência explícita para revisão humana.
                 ref.authors_verified = None
+                note = (
+                    "Autores não confirmados (nenhuma fonte autoritativa "
+                    "com lista de autores) — pendência de revisão humana"
+                )
+                if note not in ref.verification_issues:
+                    ref.verification_issues.append(note)
 
             stats["verified"] += 1
             if stats["verified"] % 10 == 0:
@@ -335,9 +389,14 @@ def verify_references(
         print(f"  → {stats['journal_mismatched']} journals com discrepâncias")
     print(f"  → {stats['pubmed_found']} verificados via PubMed")
 
-    no_doi = [r for r in refs if not r.is_duplicate and not r.doi]
+    no_doi = [r for r in refs if not r.is_duplicate and not r.doi and not r.pmid]
     if no_doi:
-        print(f"  → {len(no_doi)} referências sem DOI (não verificadas)")
+        print(
+            f"  → ⚠ {len(no_doi)} referências sem DOI/PMID mesmo após resgate "
+            f"por título — PENDÊNCIA HUMANA (limitadas a BRONZE)"
+        )
+        for r in no_doi[:10]:
+            print(f"      - {r.title[:70]}")
 
     # Salvar refs-verified.json
     pipeline_dir = get_pipeline_dir(project_name)

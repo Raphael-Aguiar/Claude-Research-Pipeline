@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 
+import requests
 from habanero import Crossref
 from rapidfuzz import fuzz
 
@@ -76,9 +77,68 @@ def verify_doi(
         result["has_update"] = _check_update(msg)
 
     except Exception:
-        result["resolves"] = False
+        # CrossRef não indexa DOIs DataCite/arXiv (10.48550/...) e falha
+        # com alguns caracteres especiais — testar o resolvedor oficial
+        # antes de declarar o DOI quebrado (lição da tese Renato, 2026-04).
+        if resolve_doi_via_doiorg(doi):
+            result["resolves"] = True
+            result["resolver"] = "doi.org"
+        else:
+            result["resolves"] = False
 
     return result
+
+
+def resolve_doi_via_doiorg(doi: str, timeout: int = 15) -> bool:
+    """Verifica se o DOI resolve via https://doi.org (independe do CrossRef).
+
+    Cobre DOIs registrados em outras agências (DataCite, mEDRA etc.).
+    """
+    if not doi:
+        return False
+    try:
+        resp = requests.head(
+            f"https://doi.org/{doi}",
+            allow_redirects=True,
+            timeout=timeout,
+            headers={"User-Agent": "escrita-tooling/0.1 (mailto:pipeline)"},
+        )
+        return resp.status_code < 400
+    except requests.RequestException as e:
+        print(f"    doi.org: erro ao resolver {doi} ({e})")
+        return False
+
+
+def find_doi_by_title(
+    title: str,
+    year: int | None = None,
+    email: str = "",
+) -> dict | None:
+    """Busca um trabalho no CrossRef pelo título (para refs sem DOI).
+
+    Retorna o item CrossRef apenas se o título tiver similaridade
+    fuzzy >= 90 (e ano compatível ±1, quando informado).
+    """
+    if not title:
+        return None
+    items = search_crossref(title, email=email, max_results=5)
+    for item in items:
+        titles = item.get("title", [])
+        candidate_title = titles[0] if titles else ""
+        if not candidate_title:
+            continue
+        similarity = fuzz.ratio(
+            title.lower().strip(), candidate_title.lower().strip()
+        )
+        if similarity < 90:
+            continue
+        if year:
+            issued = item.get("issued", {}).get("date-parts", [[None]])
+            item_year = issued[0][0] if issued and issued[0] else None
+            if item_year and abs(int(item_year) - year) > 1:
+                continue
+        return item
+    return None
 
 
 def search_crossref(
@@ -102,7 +162,8 @@ def search_crossref(
         )
         items = results.get("message", {}).get("items", [])
         return items
-    except Exception:
+    except Exception as e:
+        print(f"    CrossRef search: erro na busca ({e})")
         return []
 
 

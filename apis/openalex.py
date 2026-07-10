@@ -191,7 +191,8 @@ def _parse_openalex_work(work: dict, query: str) -> Reference | None:
         )
         return ref
 
-    except Exception:
+    except Exception as e:
+        print(f"    openalex: registro descartado por erro de parsing ({e})")
         return None
 
 

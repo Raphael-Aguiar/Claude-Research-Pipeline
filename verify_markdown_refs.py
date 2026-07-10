@@ -220,13 +220,34 @@ def verify_markdown_refs(
 
         doi = ref["doi"]
         if not doi:
-            results.append({
-                "number": ref["number"],
-                "status": "no_doi",
-                "reason": "Sem DOI — busca por título não implementada",
-                "ref": ref,
-            })
-            continue
+            # Resgate por título (zero-trust: ref sem DOI não pode
+            # simplesmente escapar da verificação)
+            rescued_doi = _find_doi_for_ref(ref, verbose=verbose)
+            if rescued_doi:
+                ref["doi"] = rescued_doi
+                doi = rescued_doi
+            elif ref.get("pmid"):
+                results.append({
+                    "number": ref["number"],
+                    "status": "pmid_only",
+                    "reason": (
+                        f"Existe no PubMed (PMID {ref['pmid']}) mas sem DOI — "
+                        "conferir metadados manualmente no PubMed"
+                    ),
+                    "ref": ref,
+                })
+                continue
+            else:
+                results.append({
+                    "number": ref["number"],
+                    "status": "no_doi",
+                    "reason": (
+                        "Sem DOI e título não localizado no PubMed/CrossRef "
+                        "— VERIFICAR MANUALMENTE (WebFetch/navegador)"
+                    ),
+                    "ref": ref,
+                })
+                continue
 
         if verbose:
             print(f"\n  [{ref['number']}] DOI: {doi}")
@@ -245,7 +266,7 @@ def verify_markdown_refs(
     if verbose:
         ok = sum(1 for r in results if r["status"] == "ok")
         issues = sum(1 for r in results if r["status"] == "mismatch")
-        skipped = sum(1 for r in results if r["status"] in ("skipped", "no_doi"))
+        skipped = sum(1 for r in results if r["status"] in ("skipped", "no_doi", "pmid_only"))
         errors = sum(1 for r in results if r["status"] == "error")
         print(f"\n{'=' * 50}")
         print(f"RESULTADO: {ok} OK, {issues} com discrepâncias, "
@@ -253,6 +274,40 @@ def verify_markdown_refs(
         print(f"Relatório: {output}")
 
     return results
+
+
+def _find_doi_for_ref(ref: dict, verbose: bool = True) -> str | None:
+    """Busca DOI de uma ref sem DOI pelo título (PubMed → CrossRef)."""
+    from .apis.crossref import find_doi_by_title
+    from .apis.pubmed import fetch_pubmed_metadata, find_pmid_by_title
+    from .config import get_api_config
+
+    title = ref.get("title", "")
+    if not title:
+        return None
+    year_str = ref.get("year", "")
+    year = int(year_str) if str(year_str).isdigit() else None
+
+    api_config = get_api_config()
+    pm_email = api_config.get("NCBI_EMAIL", "")
+
+    if pm_email:
+        pmid = find_pmid_by_title(title, email=pm_email, year=year)
+        if pmid:
+            meta = fetch_pubmed_metadata(pmid=pmid, email=pm_email)
+            if verbose:
+                print(f"  [{ref['number']}] PMID {pmid} encontrado por título")
+            ref["pmid"] = pmid
+            # PubMed nem sempre traz DOI aqui; tentar CrossRef abaixo se não
+
+    item = find_doi_by_title(
+        title, year=year, email=api_config.get("CROSSREF_EMAIL", "")
+    )
+    if item and item.get("DOI"):
+        if verbose:
+            print(f"  [{ref['number']}] DOI {item['DOI']} encontrado por título")
+        return item["DOI"]
+    return None
 
 
 def _verify_single_ref(ref: dict, verbose: bool = True) -> dict:

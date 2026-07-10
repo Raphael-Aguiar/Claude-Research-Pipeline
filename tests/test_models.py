@@ -11,13 +11,23 @@ from tools.models import (
 )
 
 
+def _verified(**kwargs) -> Reference:
+    """Reference com identidade verificada (sem pendências zero-trust v3)."""
+    defaults = dict(doi="10.1000/teste", doi_resolves=True)
+    defaults.update(kwargs)
+    return Reference(**defaults)
+
+
 class TestComputeGrade:
-    """Testa todos os cenários de compute_grade() (v2).
+    """Testa todos os cenários de compute_grade() (v2 + travas v3).
 
     Regras v2: acesso NÃO reduz grade.
     - GOLD = T1-T2 + DIRECT (independente de acesso)
     - SILVER = T3 + DIRECT, ou T1-T2 + TANGENTIAL
     - BRONZE = T3 + TANGENTIAL
+
+    v3 (zero-trust): pendência de verificação limita a BRONZE.
+    Os testes de grade usam _verified() para isolar as regras v2.
     """
 
     def test_retracted_is_discard(self):
@@ -54,7 +64,7 @@ class TestComputeGrade:
         assert ref.compute_grade() == CompositeGrade.DISCARD
 
     def test_t1_direct_accessible_is_gold(self):
-        ref = Reference(
+        ref = _verified(
             tier=Tier.T1,
             relevance=Relevance.DIRECT,
             access_status=AccessStatus.ACCESSIBLE,
@@ -62,7 +72,7 @@ class TestComputeGrade:
         assert ref.compute_grade() == CompositeGrade.GOLD
 
     def test_t2_direct_oa_is_gold(self):
-        ref = Reference(
+        ref = _verified(
             tier=Tier.T2,
             relevance=Relevance.DIRECT,
             access_status=AccessStatus.OPEN_ACCESS,
@@ -71,7 +81,7 @@ class TestComputeGrade:
 
     def test_t1_direct_restricted_is_gold(self):
         """v2: acesso NÃO reduz grade — T1+DIRECT+restricted = GOLD."""
-        ref = Reference(
+        ref = _verified(
             tier=Tier.T1,
             relevance=Relevance.DIRECT,
             access_status=AccessStatus.RESTRICTED,
@@ -80,7 +90,7 @@ class TestComputeGrade:
 
     def test_t1_direct_no_url_is_gold(self):
         """v2: acesso NÃO reduz grade — T1+DIRECT+no_url = GOLD."""
-        ref = Reference(
+        ref = _verified(
             tier=Tier.T1,
             relevance=Relevance.DIRECT,
             access_status=AccessStatus.NO_URL,
@@ -88,7 +98,7 @@ class TestComputeGrade:
         assert ref.compute_grade() == CompositeGrade.GOLD
 
     def test_t1_tangential_is_silver(self):
-        ref = Reference(
+        ref = _verified(
             tier=Tier.T1,
             relevance=Relevance.TANGENTIAL,
             access_status=AccessStatus.ACCESSIBLE,
@@ -96,7 +106,7 @@ class TestComputeGrade:
         assert ref.compute_grade() == CompositeGrade.SILVER
 
     def test_t3_direct_is_silver(self):
-        ref = Reference(
+        ref = _verified(
             tier=Tier.T3,
             relevance=Relevance.DIRECT,
             access_status=AccessStatus.ACCESSIBLE,
@@ -104,12 +114,58 @@ class TestComputeGrade:
         assert ref.compute_grade() == CompositeGrade.SILVER
 
     def test_t3_tangential_is_bronze(self):
-        ref = Reference(
+        ref = _verified(
             tier=Tier.T3,
             relevance=Relevance.TANGENTIAL,
             access_status=AccessStatus.ACCESSIBLE,
         )
         assert ref.compute_grade() == CompositeGrade.BRONZE
+
+
+class TestZeroTrustCaps:
+    """Travas v3: pendência de verificação limita a grade a BRONZE."""
+
+    def test_sem_identificador_e_sem_verificacao_vira_bronze(self):
+        ref = Reference(tier=Tier.T1, relevance=Relevance.DIRECT)
+        assert ref.compute_grade() == CompositeGrade.BRONZE
+        assert ref.verification_pendencies()
+
+    def test_autores_divergentes_vira_bronze(self):
+        ref = _verified(
+            tier=Tier.T1, relevance=Relevance.DIRECT, authors_verified=False
+        )
+        assert ref.compute_grade() == CompositeGrade.BRONZE
+
+    def test_titulo_divergente_vira_bronze(self):
+        ref = _verified(
+            tier=Tier.T1,
+            relevance=Relevance.DIRECT,
+            crossref_match=False,
+            crossref_title_similarity=40.0,
+        )
+        assert ref.compute_grade() == CompositeGrade.BRONZE
+
+    def test_doi_que_nao_resolve_vira_bronze(self):
+        ref = Reference(
+            tier=Tier.T1,
+            relevance=Relevance.DIRECT,
+            doi="10.9999/quebrado",
+            doi_resolves=False,
+        )
+        assert ref.compute_grade() == CompositeGrade.BRONZE
+
+    def test_verificada_por_titulo_nao_tem_pendencia(self):
+        ref = Reference(
+            tier=Tier.T1,
+            relevance=Relevance.DIRECT,
+            verified_via="title-pubmed",
+            pmid="12345678",
+        )
+        assert ref.compute_grade() == CompositeGrade.GOLD
+
+    def test_retratada_continua_discard_mesmo_com_pendencia(self):
+        ref = Reference(tier=Tier.T1, relevance=Relevance.DIRECT, retracted=True)
+        assert ref.compute_grade() == CompositeGrade.DISCARD
 
 
 class TestNewFields:

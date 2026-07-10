@@ -93,6 +93,31 @@ def generate_audit_report(
             lines.append(f"- {c}")
         lines.append("")
 
+    # Pendências de verificação humana (zero-trust: nunca silenciosas)
+    pending = [
+        (r, r.verification_pendencies())
+        for r in active
+        if r.grade != CompositeGrade.DISCARD
+    ]
+    pending = [(r, p) for r, p in pending if p]
+    if pending:
+        lines.extend([
+            "## ⚠ Pendências de verificação humana",
+            "",
+            "Referências abaixo têm verificação incompleta e estão LIMITADAS a "
+            "BRONZE até resolução manual. Não citar antes de resolver.",
+            "",
+            "| Ref | Título | DOI | Pendência |",
+            "|---|---|---|---|",
+        ])
+        for r, pend in pending:
+            # DOI nunca truncado (regra absoluta — coluna própria)
+            lines.append(
+                f"| {r.id} | {r.title[:60]} | {r.doi or '—'} | "
+                f"{'; '.join(pend)} |"
+            )
+        lines.append("")
+
     lines.extend([
         f"**Bases consultadas:** {', '.join(config.apis)}",
         f"**Período:** {config.year_range[0]}–{config.year_range[1]}",

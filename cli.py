@@ -378,7 +378,7 @@ def cmd_verify(args) -> int:
 
 def cmd_status(args) -> int:
     """Exibe estado do pipeline para o projeto."""
-    pipeline_dir = get_pipeline_dir(args.project)
+    pipeline_dir = get_pipeline_dir(args.project, create=False)
 
     files = {
         "scope.yaml": get_scope_path(args.project),
@@ -603,7 +603,7 @@ def _parse_ref_range(spec: str) -> list[int]:
 
 def _load_latest_refs(project: str) -> list:
     """Carrega referências do último checkpoint disponível."""
-    pipeline_dir = get_pipeline_dir(project)
+    pipeline_dir = get_pipeline_dir(project, create=False)
 
     # Ordem de preferência (mais recente primeiro)
     candidates = [
