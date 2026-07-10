@@ -35,6 +35,7 @@ def screen_references(
         Modality.REVISAO_INTEGRATIVA,
         Modality.REVISAO_SISTEMATICA,
         Modality.REVISAO_ESCOPO,
+        Modality.META_REVISAO,
     )
 
     # Preparar keywords com word boundaries
@@ -52,10 +53,13 @@ def screen_references(
     counts = {
         "total": 0,
         "excluded_pub_type": 0,
+        "excluded_not_review": 0,
         "excluded_off_topic": 0,
         "classified_direct": 0,
         "classified_tangential": 0,
         "classified_off_topic": 0,
+        "llm_promoted": 0,
+        "llm_divergent": 0,
     }
 
     for ref in refs:
@@ -77,6 +81,13 @@ def screen_references(
             ref.relevance = Relevance.OFF_TOPIC
             ref.relevance_method = "pub_type_excluded"
             counts["excluded_pub_type"] += 1
+            continue
+
+        # --- FILTRO 1b (só meta-revisão): apenas revisões entram ---
+        if config.modality == Modality.META_REVISAO and not _is_review_like(ref):
+            ref.relevance = Relevance.OFF_TOPIC
+            ref.relevance_method = "nao_e_revisao"
+            counts["excluded_not_review"] += 1
             continue
 
         # --- FILTRO 2: Exclusão hard por keywords ---
@@ -127,6 +138,29 @@ def screen_references(
                 ref.relevance = Relevance.TANGENTIAL
                 ref.relevance_method += "_no_axis"
 
+        # --- FILTRO 5: Combinação com triagem semântica LLM (dupla triagem) ---
+        # O LLM aplica os critérios de I/E em prosa (screen-export/import).
+        # Concordância refina; divergência NUNCA descarta silenciosamente —
+        # a ref fica viva e marcada para o revisor humano.
+        if ref.llm_verdict:
+            if ref.llm_verdict == "include":
+                if ref.relevance == Relevance.TANGENTIAL:
+                    ref.relevance = Relevance.DIRECT
+                    ref.relevance_method += "|llm_include"
+                    counts["llm_promoted"] += 1
+                elif ref.relevance == Relevance.OFF_TOPIC:
+                    # Divergente: LLM inclui, keywords excluem → humano decide
+                    ref.relevance = Relevance.TANGENTIAL
+                    ref.relevance_method += "|llm_divergent_include"
+                    counts["llm_divergent"] += 1
+            elif ref.llm_verdict == "exclude":
+                if ref.relevance != Relevance.OFF_TOPIC:
+                    # Divergente: keywords incluem, LLM exclui → humano decide
+                    ref.relevance_method += "|llm_divergent_exclude"
+                    counts["llm_divergent"] += 1
+            elif ref.llm_verdict == "maybe":
+                ref.relevance_method += "|llm_maybe"
+
         # Contar
         if ref.relevance == Relevance.DIRECT:
             counts["classified_direct"] += 1
@@ -148,11 +182,44 @@ def screen_references(
     print(f"  → OFF_TOPIC: {counts['classified_off_topic']} ({counts['classified_off_topic']/unique*100:.0f}%)" if unique else "")
     print(f"  → Excluídos por pub_type: {counts['excluded_pub_type']}")
     print(f"  → Excluídos por exclusion_keyword: {counts['excluded_off_topic']}")
+    if config.modality == Modality.META_REVISAO:
+        print(f"  → Excluídos por não serem revisão (meta-revisão): {counts['excluded_not_review']}")
+    if counts["llm_promoted"] or counts["llm_divergent"]:
+        print(f"  → Triagem LLM: {counts['llm_promoted']} promovidas, "
+              f"{counts['llm_divergent']} divergências (ver screening-report.md)")
 
     # --- GERAR LISTA DE VALIDAÇÃO ---
     _generate_validation_list(refs, config, counts)
 
     return refs
+
+
+_REVIEW_TITLE_RE = re.compile(
+    r"systematic review|meta-?analysis|scoping review|umbrella review"
+    r"|integrative review|rapid review|overview of (systematic )?reviews"
+    r"|revis[aã]o sistem[aá]tica|revis[aã]o de escopo|revis[aã]o integrativa"
+    r"|metan[aá]lise|meta-an[aá]lise|revis[aã]o guarda-chuva",
+    re.IGNORECASE,
+)
+
+_REVIEW_PUB_TYPES = {
+    "review", "systematic-review", "systematic review", "meta-analysis",
+    "journal-review",
+}
+
+
+def _is_review_like(ref: Reference) -> bool:
+    """Heurística: a referência é uma revisão? (para modalidade meta-revisão).
+
+    Sinais: pub_type de revisão OU título contendo termo de revisão
+    (EN/PT). Abstract não é usado — muitos artigos primários citam
+    'systematic review' no abstract sem sê-lo.
+    """
+    if ref.pub_type and ref.pub_type.strip().lower() in _REVIEW_PUB_TYPES:
+        return True
+    if ref.title and _REVIEW_TITLE_RE.search(ref.title):
+        return True
+    return False
 
 
 def _compile_patterns(keywords: list[str]) -> list[re.Pattern]:

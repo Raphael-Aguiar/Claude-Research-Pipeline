@@ -46,6 +46,14 @@ class Modality(Enum):
     REVISAO_INTEGRATIVA = "revisao-integrativa"
     REVISAO_SISTEMATICA = "revisao-sistematica"
     REVISAO_ESCOPO = "revisao-escopo"
+    META_REVISAO = "meta-revisao"  # umbrella review — só inclui revisões
+
+REVIEW_MODALITIES = {
+    Modality.REVISAO_INTEGRATIVA,
+    Modality.REVISAO_SISTEMATICA,
+    Modality.REVISAO_ESCOPO,
+    Modality.META_REVISAO,
+}
 
 
 @dataclass
@@ -97,6 +105,11 @@ class Reference:
     # --- Relevância (etapa 6) ---
     relevance: Relevance = Relevance.OFF_TOPIC
     relevance_method: str = ""
+
+    # --- Triagem semântica por LLM (etapa 6b — critérios de I/E em prosa) ---
+    llm_verdict: str | None = None  # include | exclude | maybe
+    llm_reason: str | None = None
+    llm_criteria: list[str] = field(default_factory=list)  # ex: ["I1", "E2"]
 
     # --- Integridade (etapa 7) ---
     retracted: bool | None = None
@@ -234,6 +247,9 @@ class Reference:
             "domain": self.domain,
             "relevance": self.relevance.value,
             "relevance_method": self.relevance_method,
+            "llm_verdict": self.llm_verdict,
+            "llm_reason": self.llm_reason,
+            "llm_criteria": self.llm_criteria,
             "retracted": self.retracted,
             "has_correction": self.has_correction,
             "access_status": self.access_status.value,
@@ -284,6 +300,9 @@ class Reference:
         ref.tier = Tier[tier_name] if tier_name in Tier.__members__ else Tier.UNKNOWN
         ref.domain = data.get("domain")
         ref.relevance = Relevance(data.get("relevance", 0))
+        ref.llm_verdict = data.get("llm_verdict")
+        ref.llm_reason = data.get("llm_reason")
+        ref.llm_criteria = data.get("llm_criteria", [])
         ref.relevance_method = data.get("relevance_method", "")
         ref.retracted = data.get("retracted")
         ref.has_correction = data.get("has_correction")
@@ -331,3 +350,5 @@ class SearchConfig:
     relevance_keywords_off_topic: list[str] = field(default_factory=list)
     research_axes: list[ResearchAxis] = field(default_factory=list)
     quality_framework: str | None = None
+    # Áreas do Semantic Scholar (fieldsOfStudy); lista vazia = sem filtro
+    fields_of_study: list[str] = field(default_factory=lambda: ["Medicine"])

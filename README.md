@@ -60,14 +60,47 @@ Refs verificadas
 
 ## Modalidades
 
-O pipeline opera em 4 modos, selecionados no `scope.yaml`:
+O pipeline opera em 5 modos, selecionados no `scope.yaml`:
 
-| Modalidade | Uso | Produto |
-|---|---|---|
-| `pesquisa-base` | Subsidiar escrita (capítulo, artigo, aula) | Base de refs verificadas (intermediário) |
-| `revisao-integrativa` | Publicar revisão integrativa | A revisão É o artigo |
-| `revisao-sistematica` | Publicar revisão sistemática | A revisão É o artigo (protocolo PRISMA) |
-| `revisao-escopo` | Mapear extensão da evidência | A revisão É o artigo (PRISMA-ScR) |
+| Modalidade | Uso | Produto | Norma/qualidade |
+|---|---|---|---|
+| `pesquisa-base` | Subsidiar escrita (capítulo, artigo, aula) | Base de refs verificadas (intermediário) | — |
+| `revisao-integrativa` | Publicar revisão integrativa | A revisão É o artigo | PRISMA adaptado; MMAT/CASP |
+| `revisao-sistematica` | Publicar revisão sistemática | A revisão É o artigo | PRISMA 2020; RoB 2/GRADE |
+| `revisao-escopo` | Mapear extensão da evidência | A revisão É o artigo | PRISMA-ScR (JBI) |
+| `meta-revisao` | Umbrella review (revisão de revisões) | A revisão É o artigo | PRIOR; AMSTAR-2 |
+
+Na `meta-revisao`, o PubMed recebe filtro `systematic[sb]/review[pt]` automático
+e a triagem descarta o que não é revisão (`relevance_method=nao_e_revisao`).
+
+## Triagem semântica LLM (dupla triagem)
+
+Os critérios de inclusão/exclusão **em prosa** do scope.yaml são aplicados por
+um revisor LLM (Claude Code), combinado com a triagem por keywords:
+
+```bash
+python -m tools screen-export "Projeto"   # gera screening-batch.jsonl + instruções
+# Claude Code julga cada ref e escreve pipeline/.screening-verdicts.jsonl
+python -m tools screen-import "Projeto"   # valida, calcula kappa de Cohen, relata divergências
+python -m tools run "Projeto" --from-stage 5   # etapa 6 combina os dois sinais
+```
+
+Divergências keyword×LLM **nunca são descartadas silenciosamente** — vão para
+`screening-report.md` para decisão do revisor humano (revisor 2).
+
+## Descritores MeSH/DeCS
+
+```bash
+python -m tools descriptors "Projeto"
+# → pipeline/descriptors-suggested.md (API MeSH da NLM; matches exatos
+#   viram bloco YAML pronto). DeCS aceita o rótulo MeSH em inglês (mh:).
+```
+
+## Fluxo PRISMA canônico
+
+Gerado automaticamente na etapa 9 para modalidades de revisão
+(`pipeline/prisma-flow.md`, com diagrama Mermaid + contagens por base), ou
+sob demanda: `python -m tools prisma "Projeto"`.
 
 
 ## Pré-requisitos

@@ -1,5 +1,10 @@
 # Defaults por modalidade — carregados automaticamente quando
 # o scope.yaml não define um valor explícito.
+#
+# Bases implementadas: pubmed, openalex, semantic_scholar, europe_pmc,
+# bvs_lilacs (requer BVS_API_KEY no .env — chave gratuita em
+# https://api.bvsalud.org; cobre LILACS + SciELO + MEDLINE federados).
+# Cobertura SciELO adicional vem via OpenAlex/Crossref (DOIs).
 
 pesquisa-base:
   apis: ["pubmed", "openalex"]
@@ -9,22 +14,37 @@ pesquisa-base:
   languages: ["en", "pt"]
 
 revisao-integrativa:
-  apis: ["pubmed", "openalex"]
+  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc"]
   max_results_per_api: 300
   max_final_refs: 80
   year_range: [2015, 2026]
   languages: ["en", "pt", "es"]
+  quality_framework: "MMAT/CASP"
 
+# Revisão sistemática exige ≥3 bases documentadas (Cochrane MECIR)
 revisao-sistematica:
-  apis: ["pubmed", "openalex"]
+  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc", "bvs_lilacs"]
   max_results_per_api: 500
   max_final_refs: 200
   year_range: [2010, 2026]
   languages: ["en", "pt", "es"]
+  quality_framework: "RoB 2 / GRADE"
 
 revisao-escopo:
-  apis: ["pubmed", "openalex"]
+  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc", "bvs_lilacs"]
   max_results_per_api: 500
   max_final_refs: 200
   year_range: [2010, 2026]
   languages: ["en", "pt", "es"]
+  quality_framework: "PRISMA-ScR (avaliação de qualidade não requerida — JBI)"
+
+# Meta-revisão (umbrella review / overview of reviews): só inclui revisões.
+# PubMed recebe filtro systematic[sb]/review[pt]/meta-analysis[pt] automático;
+# a triagem descarta o que não é revisão (relevance_method=nao_e_revisao).
+meta-revisao:
+  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc", "bvs_lilacs"]
+  max_results_per_api: 500
+  max_final_refs: 100
+  year_range: [2010, 2026]
+  languages: ["en", "pt", "es"]
+  quality_framework: "AMSTAR-2 (qualidade das revisões incluídas) + PRIOR (relato)"

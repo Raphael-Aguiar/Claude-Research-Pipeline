@@ -76,6 +76,7 @@ def get_api_config() -> dict[str, str]:
         "CROSSREF_EMAIL",
         "UNPAYWALL_EMAIL",
         "SEMANTIC_SCHOLAR_API_KEY",
+        "BVS_API_KEY",
     ]
     config = {}
     for key in keys:
@@ -156,8 +157,14 @@ def load_scope(project_name: str) -> SearchConfig:
         )
         config.research_axes.append(axis)
 
-    # Quality framework
-    config.quality_framework = data.get("quality_framework")
+    # Quality framework (scope > default da modalidade)
+    config.quality_framework = data.get(
+        "quality_framework", defaults.get("quality_framework")
+    )
+
+    # Áreas do Semantic Scholar (lista vazia = sem filtro)
+    if "fields_of_study" in data:
+        config.fields_of_study = data["fields_of_study"] or []
 
     return config
 

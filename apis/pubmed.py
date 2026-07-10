@@ -54,7 +54,7 @@ def _build_query(config: SearchConfig) -> str:
 
     # Filtro de idioma
     if config.languages:
-        lang_map = {"en": "eng", "pt": "por", "es": "spa"}
+        lang_map = {"en": "english", "pt": "portuguese", "es": "spanish"}
         lang_parts = []
         for lang in config.languages:
             code = lang_map.get(lang, lang)
@@ -62,11 +62,22 @@ def _build_query(config: SearchConfig) -> str:
         if lang_parts:
             query += f' AND ({" OR ".join(lang_parts)})'
 
-    # Filtro de publication type (excluir editoriais, cartas, comentários)
-    query += (
-        ' AND ("Journal Article"[PT] OR "Review"[PT]'
-        ' OR "Systematic Review"[PT] OR "Meta-Analysis"[PT])'
-    )
+    # Filtro de publication type
+    from ..models import Modality
+
+    if config.modality == Modality.META_REVISAO:
+        # Meta-revisão (umbrella review): só revisões entram.
+        # systematic[sb] é o subset oficial do PubMed para revisões sistemáticas.
+        query += (
+            ' AND (systematic[sb] OR "Review"[PT]'
+            ' OR "Systematic Review"[PT] OR "Meta-Analysis"[PT])'
+        )
+    else:
+        # Excluir editoriais, cartas, comentários
+        query += (
+            ' AND ("Journal Article"[PT] OR "Review"[PT]'
+            ' OR "Systematic Review"[PT] OR "Meta-Analysis"[PT])'
+        )
 
     return query
 
@@ -98,7 +109,7 @@ def _build_fallback_query(config: SearchConfig) -> str:
     query += f' AND ("{start}"[PDAT] : "{end}"[PDAT])'
 
     if config.languages:
-        lang_map = {"en": "eng", "pt": "por", "es": "spa"}
+        lang_map = {"en": "english", "pt": "portuguese", "es": "spanish"}
         lang_parts = [f'"{lang_map.get(l, l)}"[Language]' for l in config.languages]
         query += f' AND ({" OR ".join(lang_parts)})'
 

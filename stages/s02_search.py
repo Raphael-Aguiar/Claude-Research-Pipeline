@@ -100,7 +100,8 @@ def _search_single_api(
         return search_europe_pmc(config)
 
     elif api_name == "bvs_lilacs":
-        return search_bvs_lilacs(config)
+        bvs_key = api_config.get("BVS_API_KEY", "")
+        return search_bvs_lilacs(config, api_key=bvs_key)
 
     else:
         print(f"  API '{api_name}' não implementada "

@@ -180,6 +180,30 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_facts_crosscheck.add_argument("project", help="Nome do projeto")
 
+    p_descriptors = subparsers.add_parser(
+        "descriptors",
+        help="Sugerir descritores MeSH/DeCS para os termos do scope.yaml",
+    )
+    p_descriptors.add_argument("project", help="Nome do projeto")
+
+    p_screen_export = subparsers.add_parser(
+        "screen-export",
+        help="Exportar lote para triagem semântica LLM (dupla triagem)",
+    )
+    p_screen_export.add_argument("project", help="Nome do projeto")
+
+    p_screen_import = subparsers.add_parser(
+        "screen-import",
+        help="Importar veredictos da triagem LLM + calcular kappa",
+    )
+    p_screen_import.add_argument("project", help="Nome do projeto")
+
+    p_prisma = subparsers.add_parser(
+        "prisma",
+        help="Gerar fluxograma PRISMA canônico (PRISMA 2020/ScR/PRIOR)",
+    )
+    p_prisma.add_argument("project", help="Nome do projeto")
+
     args = parser.parse_args(argv)
 
     if not args.command:
@@ -221,6 +245,14 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_facts_report(args)
         elif args.command == "facts-crosscheck":
             return cmd_facts_crosscheck(args)
+        elif args.command == "descriptors":
+            return cmd_descriptors(args)
+        elif args.command == "screen-export":
+            return cmd_screen_export(args)
+        elif args.command == "screen-import":
+            return cmd_screen_import(args)
+        elif args.command == "prisma":
+            return cmd_prisma(args)
     except Exception as e:
         print(f"\nERRO: {e}", file=sys.stderr)
         return 1
@@ -273,8 +305,9 @@ def cmd_run(args) -> int:
         print("\n[2/10] Buscando referências...")
         refs = run_search(config)
     elif args.from_stage > 2:
-        # Carregar refs do último checkpoint
-        refs = _load_latest_refs(project)
+        # Carregar refs do último checkpoint. Para re-triagem (from-stage <= 6)
+        # preferir refs-verified (conjunto completo) a refs-final (já filtrado).
+        refs = _load_latest_refs(project, prefer_full=args.from_stage <= 6)
 
     if not refs:
         print("\nNenhuma referência encontrada. Verifique o scope.yaml.")
@@ -601,17 +634,112 @@ def _parse_ref_range(spec: str) -> list[int]:
     return sorted(set(result))
 
 
-def _load_latest_refs(project: str) -> list:
-    """Carrega referências do último checkpoint disponível."""
+def cmd_descriptors(args) -> int:
+    """Sugere descritores MeSH/DeCS para os termos livres do scope.yaml."""
+    from .apis.mesh_lookup import suggest_for_config
+
+    config = load_scope(args.project)
+    print(f"Consultando a API MeSH da NLM para os termos de '{args.project}'...")
+    suggestions = suggest_for_config(config)
+
+    pipeline_dir = get_pipeline_dir(args.project)
+    out = pipeline_dir / "descriptors-suggested.md"
+    lines = [
+        f"# Descritores sugeridos — {args.project}",
+        "",
+        "Fonte: NLM MeSH lookup (id.nlm.nih.gov). Curadoria é do pesquisador:",
+        "copie os descritores confirmados para `mesh_terms:` (e `decs_terms:`)",
+        "no scope.yaml. O DeCS aceita o rótulo MeSH em inglês no campo `mh:`;",
+        "traduções PT/ES em https://decs.bvsalud.org.",
+        "",
+    ]
+    found_any = False
+    for term, matches in suggestions.items():
+        lines.append(f"## {term}")
+        if not matches:
+            lines.append("- (nenhum descritor MeSH encontrado)")
+        for m in matches:
+            found_any = True
+            marker = " ← **match exato**" if m["exact"] else ""
+            lines.append(f"- `{m['label']}`{marker} ({m['uri']})")
+        lines.append("")
+
+    exact = [
+        m["label"]
+        for matches in suggestions.values()
+        for m in matches
+        if m["exact"]
+    ]
+    if exact:
+        lines += [
+            "## Bloco pronto para o scope.yaml (matches exatos)",
+            "",
+            "```yaml",
+            "mesh_terms:",
+        ]
+        lines += [f'  - "{label}"' for label in dict.fromkeys(exact)]
+        lines += ["```", ""]
+
+    out.write_text("\n".join(lines), encoding="utf-8")
+    print(f"Sugestões salvas em: {out}")
+    if not found_any:
+        print("Nenhum descritor encontrado — verifique os termos (em inglês).")
+    return 0
+
+
+def cmd_screen_export(args) -> int:
+    """Exporta lote de triagem semântica para o revisor LLM."""
+    from .screening import export_screening_batch
+
+    config = load_scope(args.project)
+    result = export_screening_batch(args.project, config)
+    return 0 if result.get("exported") else 1
+
+
+def cmd_screen_import(args) -> int:
+    """Importa veredictos da triagem LLM e calcula concordância."""
+    from .screening import import_screening_verdicts
+
+    result = import_screening_verdicts(args.project)
+    return 0 if result.get("imported") else 1
+
+
+def cmd_prisma(args) -> int:
+    """Gera fluxograma PRISMA canônico a partir do último checkpoint."""
+    from .exporters.prisma_flow import generate_prisma_flow
+
+    config = load_scope(args.project)
+    refs = _load_latest_refs(args.project)
+    if not refs:
+        print("Nenhuma referência encontrada. Rode o pipeline antes.")
+        return 1
+    pipeline_dir = get_pipeline_dir(args.project)
+    generate_prisma_flow(refs, config, pipeline_dir / "prisma-flow.md")
+    return 0
+
+
+def _load_latest_refs(project: str, prefer_full: bool = False) -> list:
+    """Carrega referências do último checkpoint disponível.
+
+    prefer_full=True: prioriza o conjunto completo (refs-verified) sobre
+    refs-final (já filtrado) — necessário para re-triagem.
+    """
     pipeline_dir = get_pipeline_dir(project, create=False)
 
-    # Ordem de preferência (mais recente primeiro)
-    candidates = [
-        "refs-final.json",
-        "refs-verified.json",
-        "refs-dedup.json",
-        "refs-raw.json",
-    ]
+    if prefer_full:
+        candidates = [
+            "refs-verified.json",
+            "refs-dedup.json",
+            "refs-final.json",
+            "refs-raw.json",
+        ]
+    else:
+        candidates = [
+            "refs-final.json",
+            "refs-verified.json",
+            "refs-dedup.json",
+            "refs-raw.json",
+        ]
 
     for name in candidates:
         path = pipeline_dir / name

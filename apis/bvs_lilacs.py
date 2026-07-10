@@ -1,7 +1,13 @@
-"""BVS/LILACS API client (MVP via iAHx URL params).
+"""BVS API client — busca federada BIREME (LILACS + SciELO + MEDLINE + ...).
 
-API instável e mal documentada. Implementação cautelosa:
-se a resposta não for parseable, descartar silenciosamente.
+Caminho principal: API oficial https://api.bvsalud.org/search/v1 (requer
+BVS_API_KEY — chave gratuita solicitada em https://api.bvsalud.org).
+O portal público pesquisa.bvsalud.org passou a ficar atrás de desafio
+anti-robô (Bunny Shield, verificado 2026-07-10) e é mantido apenas como
+fallback de melhor esforço — normalmente retorna 403 para clientes HTTP.
+
+A cobertura SciELO vem daqui (índice federado) e também via OpenAlex/
+Crossref (DOIs de periódicos SciELO).
 """
 
 from __future__ import annotations
@@ -17,7 +23,8 @@ from ..models import Reference
 if TYPE_CHECKING:
     from ..models import SearchConfig
 
-_BASE_URL = "https://pesquisa.bvsalud.org/portal/"
+_API_URL = "https://api.bvsalud.org/search/v1/"
+_PORTAL_URL = "https://pesquisa.bvsalud.org/portal/"
 
 
 def _build_query(config: SearchConfig) -> str:
@@ -45,67 +52,140 @@ def _build_query(config: SearchConfig) -> str:
 
 def search_bvs_lilacs(
     config: SearchConfig,
+    api_key: str = "",
     max_results: int | None = None,
 ) -> list[Reference]:
-    """Busca referências na BVS/LILACS via iAHx.
+    """Busca referências na BVS (LILACS + SciELO + MEDLINE federados).
 
-    Abordagem cautelosa: se a API falhar ou retornar dados
-    não-parseáveis, retorna lista vazia sem erro.
+    Com BVS_API_KEY: usa a API oficial (api.bvsalud.org).
+    Sem chave: tenta o portal público (normalmente bloqueado por
+    anti-robô) e instrui como obter a chave gratuita.
     """
     query = _build_query(config)
     limit = max_results or config.max_results_per_api
 
+    if api_key:
+        return _search_official_api(query, config, api_key, limit)
+
+    print(
+        "    BVS: sem BVS_API_KEY configurada — o portal público está atrás "
+        "de desafio anti-robô e provavelmente falhará.\n"
+        "    Solicite a chave GRATUITA em https://api.bvsalud.org e adicione "
+        "BVS_API_KEY=<chave> ao tools/.env."
+    )
+    return _search_portal_fallback(query, config, limit)
+
+
+def _search_official_api(
+    query: str,
+    config: SearchConfig,
+    api_key: str,
+    limit: int,
+) -> list[Reference]:
+    """Busca via API oficial BIREME (api.bvsalud.org/search/v1)."""
+    references: list[Reference] = []
+    start, end = config.year_range
+    count = min(limit, 100)
+    offset = 0
+
+    while len(references) < limit:
+        params = {
+            "q": query,
+            "count": str(count),
+            "start": str(offset),
+            "lang": "pt",
+            "fq": f"year_cluster:[{start} TO {end}]",
+        }
+        try:
+            time.sleep(0.5)
+            resp = requests.get(
+                _API_URL,
+                params=params,
+                timeout=DEFAULT_TIMEOUT,
+                headers={"apikey": api_key, "Accept": "application/json"},
+            )
+            if resp.status_code == 401:
+                print("    BVS API: chave inválida/expirada (HTTP 401)")
+                return references
+            if resp.status_code != 200:
+                print(f"    BVS API: HTTP {resp.status_code}")
+                return references
+
+            data = resp.json()
+            docs = _extract_docs(data)
+            if not docs:
+                break
+
+            for doc in docs:
+                ref = _parse_bvs_doc(doc, query)
+                if ref:
+                    references.append(ref)
+                if len(references) >= limit:
+                    break
+
+            if len(docs) < count:
+                break
+            offset += count
+
+        except requests.exceptions.Timeout:
+            print("    BVS API: timeout")
+            break
+        except Exception as e:
+            print(f"    BVS API: erro ({e})")
+            break
+
+    return references
+
+
+def _extract_docs(data: dict) -> list[dict]:
+    """Extrai a lista de documentos, tolerando os formatos iAHx conhecidos."""
+    if "diaServerResponse" in data:
+        blocks = data.get("diaServerResponse") or []
+        if blocks and isinstance(blocks, list):
+            return blocks[0].get("response", {}).get("docs", [])
+    return data.get("documents", data.get("response", {}).get("docs", []))
+
+
+def _search_portal_fallback(
+    query: str,
+    config: SearchConfig,
+    limit: int,
+) -> list[Reference]:
+    """Fallback de melhor esforço via portal público (frequentemente 403)."""
+    start, end = config.year_range
     params = {
         "q": query,
-        "filter[db][]": "LILACS",
         "output": "json",
         "count": str(min(limit, 50)),
         "from": "0",
         "lang": "pt",
+        "filter[year_cluster][]": f"{start}-{end}",
     }
-
-    # Filtro de período
-    start, end = config.year_range
-    params["filter[year_cluster][]"] = f"{start}-{end}"
-
-    references = []
-
+    references: list[Reference] = []
     try:
-        time.sleep(0.5)  # Rate limiting conservador
+        time.sleep(0.5)
         resp = requests.get(
-            _BASE_URL,
+            _PORTAL_URL,
             params=params,
             timeout=DEFAULT_TIMEOUT,
             headers={"Accept": "application/json"},
         )
-
         if resp.status_code != 200:
-            print(f"    BVS/LILACS: HTTP {resp.status_code}")
+            print(f"    BVS portal: HTTP {resp.status_code} (esperado sem chave)")
             return []
-
-        # Tentar parsear como JSON
         try:
             data = resp.json()
         except Exception:
-            print("    BVS/LILACS: resposta não é JSON válido, descartando")
+            print("    BVS portal: resposta não é JSON (desafio anti-robô)")
             return []
-
-        # Extrair documentos (formato pode variar)
-        docs = data.get("documents", data.get("response", {}).get("docs", []))
-        if not docs:
-            print("    BVS/LILACS: nenhum documento encontrado")
-            return []
-
-        for doc in docs[:limit]:
+        for doc in _extract_docs(data)[:limit]:
             ref = _parse_bvs_doc(doc, query)
             if ref:
                 references.append(ref)
-
     except requests.exceptions.Timeout:
-        print("    BVS/LILACS: timeout")
+        print("    BVS portal: timeout")
     except Exception as e:
-        print(f"    BVS/LILACS: erro ({e}), descartando")
-
+        print(f"    BVS portal: erro ({e})")
     return references
 
 

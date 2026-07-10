@@ -12,6 +12,7 @@ project_name: "{{PROJECT_NAME}}"
 #   revisao-integrativa    — revisão integrativa como produto final
 #   revisao-sistematica    — revisão sistemática com protocolo rigoroso
 #   revisao-escopo         — revisão de escopo para mapear evidências
+#   meta-revisao           — umbrella review (só inclui revisões; AMSTAR-2)
 modality: {{MODALITY}}
 
 # Pergunta de pesquisa
@@ -38,14 +39,16 @@ keyword_blocks:
       - "term3 english"
 
 # Termos MeSH (PubMed) — opcional para pesquisa-base, recomendado para revisões
+# Sugestões automáticas: python -m tools descriptors "{{PROJECT_NAME}}"
 mesh_terms: []
 
-# Critérios de inclusão
+# Critérios de inclusão/exclusão em prosa — APLICADOS pela triagem
+# semântica LLM (screen-export → veredictos → screen-import). Numere
+# mentalmente: I1, I2... / E1, E2... — o revisor LLM cita o critério decisivo.
 inclusion_criteria:
   - "artigos em inglês ou português"
   - "publicados entre 2020 e 2026"
 
-# Critérios de exclusão
 exclusion_criteria:
   - "artigos fora do escopo definido"
 
@@ -56,8 +59,9 @@ year_range: [2020, 2026]
 languages: ["en", "pt"]
 
 # APIs a consultar
-# Disponíveis: pubmed, openalex
-# Fase futura: semantic_scholar, europe_pmc
+# Disponíveis: pubmed, openalex, semantic_scholar, europe_pmc,
+#              bvs_lilacs (requer BVS_API_KEY — chave gratuita em api.bvsalud.org)
+# Defaults por modalidade em templates/modality-defaults.yaml
 apis: ["pubmed", "openalex"]
 
 # Máximo de resultados por API
@@ -100,6 +104,10 @@ relevance_keywords:
   off_topic:
     - "keyword_fora_escopo"
 
-# Framework de avaliação de qualidade (apenas para revisão sistemática)
-# Exemplos: GRADE, JBI, Cochrane_RoB2
+# Framework de avaliação de qualidade (defaults por modalidade:
+# sistemática=RoB 2/GRADE, integrativa=MMAT/CASP, meta-revisão=AMSTAR-2+PRIOR)
 # quality_framework: null
+
+# Áreas do Semantic Scholar (fieldsOfStudy). Default: ["Medicine"].
+# Lista vazia [] remove o filtro (temas não-biomédicos).
+# fields_of_study: ["Medicine"]

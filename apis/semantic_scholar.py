@@ -71,10 +71,11 @@ def search_semantic_scholar(
         headers["x-api-key"] = api_key
 
     # Usar bulk endpoint se tiver API key (suporta booleanos e paginação por token)
+    fos = ",".join(config.fields_of_study) if config.fields_of_study else ""
     if api_key:
-        return _search_bulk(query, start_year, end_year, limit, headers)
+        return _search_bulk(query, start_year, end_year, limit, headers, fos)
     else:
-        return _search_relevance(query, start_year, end_year, limit, headers)
+        return _search_relevance(query, start_year, end_year, limit, headers, fos)
 
 
 def _search_relevance(
@@ -83,6 +84,7 @@ def _search_relevance(
     end_year: int,
     limit: int,
     headers: dict,
+    fields_of_study: str = "",
 ) -> list[Reference]:
     """Busca via /paper/search (texto livre, ordenado por relevância)."""
     references = []
@@ -96,8 +98,9 @@ def _search_relevance(
             "offset": offset,
             "limit": per_page,
             "year": f"{start_year}-{end_year}",
-            "fieldsOfStudy": "Medicine",
         }
+        if fields_of_study:
+            params["fieldsOfStudy"] = fields_of_study
 
         try:
             time.sleep(1.0)  # Rate limit: 1 req/s sem key
@@ -140,6 +143,7 @@ def _search_bulk(
     end_year: int,
     limit: int,
     headers: dict,
+    fields_of_study: str = "",
 ) -> list[Reference]:
     """Busca via /paper/search/bulk (booleanos, ordenação por citações)."""
     references = []
@@ -150,9 +154,10 @@ def _search_bulk(
             "query": query,
             "fields": _SEARCH_FIELDS,
             "year": f"{start_year}-{end_year}",
-            "fieldsOfStudy": "Medicine",
             "sort": "citationCount:desc",
         }
+        if fields_of_study:
+            params["fieldsOfStudy"] = fields_of_study
         if token:
             params["token"] = token
 

@@ -87,6 +87,11 @@ def synthesize(
     generate_audit_report(refs, config, report_path)
     print(f"  audit-report.md: {report_path}")
 
+    # prisma-flow.md — fluxo canônico para modalidades de revisão
+    if config.modality != Modality.PESQUISA_BASE:
+        from ..exporters.prisma_flow import generate_prisma_flow
+        generate_prisma_flow(refs, config, pipeline_dir / "prisma-flow.md")
+
     # research-brief.md
     generate_brief(refs, config)
 
@@ -104,7 +109,11 @@ def _grades_for_modality(modality: Modality) -> tuple[CompositeGrade, ...]:
     """Determina quais grades incluir no output por modalidade."""
     if modality == Modality.PESQUISA_BASE:
         return (CompositeGrade.GOLD, CompositeGrade.SILVER)
-    elif modality in (Modality.REVISAO_SISTEMATICA, Modality.REVISAO_ESCOPO):
+    elif modality in (
+        Modality.REVISAO_SISTEMATICA,
+        Modality.REVISAO_ESCOPO,
+        Modality.META_REVISAO,
+    ):
         return (CompositeGrade.GOLD, CompositeGrade.SILVER, CompositeGrade.BRONZE)
     elif modality == Modality.REVISAO_INTEGRATIVA:
         return (CompositeGrade.GOLD, CompositeGrade.SILVER, CompositeGrade.BRONZE)
