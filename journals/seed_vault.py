@@ -46,8 +46,11 @@ def parse_lista_markdown(path: Path) -> list[dict]:
             estrato = None  # seção que não é estrato (ex.: ## Notas)
             continue
         m = _BULLET_RE.match(linha)
-        if not m or estrato is None:
+        if not m:
             continue
+        # Estrato é opcional: listas curadas por tema (sem headers de estrato
+        # Qualis) entram com estrato_origem=None. Bullets sem título em negrito
+        # (`- texto`) não casam _BULLET_RE e são ignorados.
         resto = m.group("resto").strip()
         url = None
         m_link = _LINK_RE.search(resto)
