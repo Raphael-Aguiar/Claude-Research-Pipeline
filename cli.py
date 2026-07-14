@@ -3,6 +3,9 @@
 Subcomandos: run, scope, search, verify, verify-refs, verify-claims, status, export,
 audit, seed, extract, extract-manual, extract-facts, facts-import, facts-status,
 facts-report, facts-crosscheck
+
+Subsistema de periódicos (recomendação de onde submeter, Qualis CAPES):
+`python -m tools journals --help` — CLI própria em journals/cli.py.
 """
 
 from __future__ import annotations
@@ -19,6 +22,15 @@ from .models import CompositeGrade, Modality
 
 def main(argv: list[str] | None = None) -> int:
     """Entry point da CLI."""
+    if argv is None:
+        argv = sys.argv[1:]
+
+    # Subsistema de periódicos (Qualis) — CLI própria em journals/cli.py
+    if argv and argv[0] == "journals":
+        from .journals.cli import main as journals_main
+
+        return journals_main(argv[1:])
+
     parser = argparse.ArgumentParser(
         prog="python -m tools",
         description="Pipeline de Pesquisa Acadêmica — busca, verifica e audita referências",

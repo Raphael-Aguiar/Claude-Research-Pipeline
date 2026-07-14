@@ -1,0 +1,46 @@
+# Pesos do pré-score de seleção de finalistas.
+#
+# ATENÇÃO: este score serve APENAS para escolher os ~12 finalistas que vão
+# ao julgamento de fit do modelo forte — ele não aparece no relatório final,
+# que apresenta trade-offs narrados, não um número único.
+#
+# Critério VIGENTE (ciclo CAPES 2025-2028, Área 22): o eixo dominante é a
+# CONSOLIDAÇÃO do periódico (Porta A bibliométrica ou Porta B SciELO-SP),
+# não mais o estrato Qualis — que virou retrospectivo (só vale para artigos
+# publicados até 2024). Ver consolidacao.py.
+#
+# Editável a qualquer momento; a soma não precisa ser 1 (é normalizada).
+
+pesos:
+  consolidacao: 0.40      # cumpre Porta A/B da Área 22 (eixo dominante)
+  fit_tematico: 0.25      # aderência (busca OpenAlex + tópicos + curadoria)
+  apc: 0.12               # acessibilidade financeira (APC menor = melhor)
+  oa: 0.08                # open access
+  seletividade: 0.08      # proxy: 2yr mean citedness (OpenAlex)
+  indexacao: 0.07         # MEDLINE
+
+# Valor do componente de consolidação por status (escala 0-1).
+# Não classificado NÃO é excluído — recebe valor baixo e flag; a rota do
+# destaque qualitativo continua aberta para periódicos fora da Porta A.
+valor_consolidacao:
+  porta_a_q1: 1.00        # categoria de saúde em Q1 (proxy CiteScore P75-100)
+  porta_a_q2: 0.85        # categoria de saúde em Q2 (proxy CiteScore P50-75)
+  porta_b: 0.85           # coleção SciELO Saúde Pública (h5 a confirmar)
+  nao_por_scimago: 0.45   # saúde só em Q3/Q4 pelo SJR (pode valer via CiteScore/JIF)
+  sem_dado: 0.35          # sem dado de categoria — verificar manual
+  sem_categoria_saude: 0.10  # armadilha: só Educação/Computação, sem porta de saúde
+
+# Teto de APC para normalização (USD). APC >= teto → componente 0.
+apc_teto_usd: 5000
+
+# Categorias Scopus de interesse temático do usuário (Saúde Coletiva ×
+# Educação × Tecnologia/IA) — bônus de fit quando o periódico tem uma
+# dessas categorias de saúde. Espelha os blocos do briefing de 2026-07-14.
+categorias_fit_interesse:
+  - "Public Health, Environmental and Occupational Health"
+  - "Epidemiology"
+  - "Health Policy"
+  - "Health Informatics"
+  - "Health Information Management"
+  - "Health Professions (miscellaneous)"
+  - "Infectious Diseases"
