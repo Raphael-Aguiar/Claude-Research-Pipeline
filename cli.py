@@ -222,6 +222,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     p_semantic.add_argument("project", help="Nome do projeto")
 
+    p_import_ris = subparsers.add_parser(
+        "import-ris",
+        help="Importar export RIS (portal BVS/LILACS, SciELO, Zotero...) para o pipeline",
+    )
+    p_import_ris.add_argument("project", help="Nome do projeto")
+    p_import_ris.add_argument("ris_file", help="Caminho do arquivo .ris exportado")
+    p_import_ris.add_argument(
+        "--source", default="bvs-portal",
+        help="Rótulo da base de origem (default: bvs-portal)",
+    )
+
     args = parser.parse_args(argv)
 
     if not args.command:
@@ -273,6 +284,8 @@ def main(argv: list[str] | None = None) -> int:
             return cmd_prisma(args)
         elif args.command == "semantic":
             return cmd_semantic(args)
+        elif args.command == "import-ris":
+            return cmd_import_ris(args)
     except Exception as e:
         print(f"\nERRO: {e}", file=sys.stderr)
         return 1
@@ -736,6 +749,14 @@ def cmd_prisma(args) -> int:
     pipeline_dir = get_pipeline_dir(args.project)
     generate_prisma_flow(refs, config, pipeline_dir / "prisma-flow.md")
     return 0
+
+
+def cmd_import_ris(args) -> int:
+    """Importa export RIS do portal BVS (ou similar) para o pipeline."""
+    from .ris_import import import_ris_file
+
+    result = import_ris_file(args.project, args.ris_file, source_label=args.source)
+    return 0 if result.get("imported") else 1
 
 
 def cmd_semantic(args) -> int:

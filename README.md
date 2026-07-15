@@ -73,6 +73,24 @@ O pipeline opera em 5 modos, selecionados no `scope.yaml`:
 Na `meta-revisao`, o PubMed recebe filtro `systematic[sb]/review[pt]` automático
 e a triagem descarta o que não é revisão (`relevance_method=nao_e_revisao`).
 
+## LILACS/SciELO — importação RIS (portal BVS)
+
+A API bibliográfica da BVS é de **uso interno da BIREME** — não existe chave
+pública (docs.api.bvsalud.org, verificado 2026-07-15). O caminho legítimo,
+indicado pela própria BIREME, é buscar pelo portal e exportar:
+
+```bash
+# 1. Executar a estratégia de busca em https://pesquisa.bvsalud.org (navegador)
+# 2. Exportar os resultados em RIS
+python -m tools import-ris "Projeto" ~/Downloads/export.ris
+python -m tools run "Projeto" --from-stage 3   # dedup + verificação zero-trust
+# 3. Documentar a string de busca no pipeline/search-log.md (exigência PRISMA)
+```
+
+O `import-ris` aceita qualquer RIS padrão (BVS, SciELO, Zotero, Rayyan,
+Scopus, Web of Science) — os registros passam pela MESMA verificação das
+buscas automáticas.
+
 ## Triagem semântica LLM (dupla triagem)
 
 Os critérios de inclusão/exclusão **em prosa** do scope.yaml são aplicados por

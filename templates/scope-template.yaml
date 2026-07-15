@@ -59,8 +59,8 @@ year_range: [2020, 2026]
 languages: ["en", "pt"]
 
 # APIs a consultar
-# Disponíveis: pubmed, openalex, semantic_scholar, europe_pmc,
-#              bvs_lilacs (requer BVS_API_KEY — chave gratuita em api.bvsalud.org)
+# Disponíveis: pubmed, openalex, semantic_scholar, europe_pmc
+# LILACS/SciELO: sem API pública — usar portal BVS + `python -m tools import-ris`
 # Defaults por modalidade em templates/modality-defaults.yaml
 apis: ["pubmed", "openalex"]
 

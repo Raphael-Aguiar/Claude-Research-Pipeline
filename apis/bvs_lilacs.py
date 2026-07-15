@@ -1,13 +1,20 @@
 """BVS API client — busca federada BIREME (LILACS + SciELO + MEDLINE + ...).
 
-Caminho principal: API oficial https://api.bvsalud.org/search/v1 (requer
-BVS_API_KEY — chave gratuita solicitada em https://api.bvsalud.org).
-O portal público pesquisa.bvsalud.org passou a ficar atrás de desafio
-anti-robô (Bunny Shield, verificado 2026-07-10) e é mantido apenas como
-fallback de melhor esforço — normalmente retorna 403 para clientes HTTP.
+⚠ ACESSO RESTRITO (verificado 2026-07-15 em docs.api.bvsalud.org): a API
+bibliográfica da BVS é de USO INTERNO da BIREME — o acesso público não é
+fornecido nem por solicitação, parceria, licenciamento ou pagamento. NÃO
+existe cadastro para obter chave. Este cliente só funciona se algum dia
+houver uma BVS_API_KEY legítima (ex.: acordo institucional); é mantido
+por isso, mas não é o caminho normal.
 
-A cobertura SciELO vem daqui (índice federado) e também via OpenAlex/
-Crossref (DOIs de periódicos SciELO).
+**Caminho legítimo para LILACS/SciELO** (indicado pela própria BIREME):
+buscar pelo Portal Regional (https://pesquisa.bvsalud.org, no navegador),
+exportar os resultados em RIS e importar com
+`python -m tools import-ris "Projeto" arquivo.ris`.
+
+Cobertura SciELO parcial também via OpenAlex/Crossref (DOIs).
+O portal público tem desafio anti-robô (Bunny Shield) — clientes HTTP
+recebem 403.
 """
 
 from __future__ import annotations
@@ -68,10 +75,11 @@ def search_bvs_lilacs(
         return _search_official_api(query, config, api_key, limit)
 
     print(
-        "    BVS: sem BVS_API_KEY configurada — o portal público está atrás "
-        "de desafio anti-robô e provavelmente falhará.\n"
-        "    Solicite a chave GRATUITA em https://api.bvsalud.org e adicione "
-        "BVS_API_KEY=<chave> ao tools/.env."
+        "    BVS: API bibliográfica é de uso interno da BIREME — não há "
+        "chave pública (docs.api.bvsalud.org, verificado 2026-07-15).\n"
+        "    Caminho legítimo: buscar em https://pesquisa.bvsalud.org no "
+        "navegador, exportar RIS e rodar "
+        "`python -m tools import-ris \"Projeto\" arquivo.ris`."
     )
     return _search_portal_fallback(query, config, limit)
 

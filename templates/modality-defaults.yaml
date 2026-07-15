@@ -1,10 +1,11 @@
 # Defaults por modalidade — carregados automaticamente quando
 # o scope.yaml não define um valor explícito.
 #
-# Bases implementadas: pubmed, openalex, semantic_scholar, europe_pmc,
-# bvs_lilacs (requer BVS_API_KEY no .env — chave gratuita em
-# https://api.bvsalud.org; cobre LILACS + SciELO + MEDLINE federados).
-# Cobertura SciELO adicional vem via OpenAlex/Crossref (DOIs).
+# Bases automáticas: pubmed, openalex, semantic_scholar, europe_pmc.
+# LILACS/SciELO: a API da BVS é de uso interno da BIREME (sem chave pública
+# — docs.api.bvsalud.org, 2026-07-15). Caminho legítimo: buscar no portal
+# https://pesquisa.bvsalud.org (navegador), exportar RIS e importar com
+# `python -m tools import-ris`. Cobertura SciELO parcial via OpenAlex (DOIs).
 
 pesquisa-base:
   apis: ["pubmed", "openalex"]
@@ -21,9 +22,11 @@ revisao-integrativa:
   languages: ["en", "pt", "es"]
   quality_framework: "MMAT/CASP"
 
-# Revisão sistemática exige ≥3 bases documentadas (Cochrane MECIR)
+# Revisão sistemática exige ≥3 bases documentadas (Cochrane MECIR).
+# Para temas brasileiros/latino-americanos, complementar com LILACS via
+# portal BVS + import-ris (ver cabeçalho).
 revisao-sistematica:
-  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc", "bvs_lilacs"]
+  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc"]
   max_results_per_api: 500
   max_final_refs: 200
   year_range: [2010, 2026]
@@ -31,7 +34,7 @@ revisao-sistematica:
   quality_framework: "RoB 2 / GRADE"
 
 revisao-escopo:
-  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc", "bvs_lilacs"]
+  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc"]
   max_results_per_api: 500
   max_final_refs: 200
   year_range: [2010, 2026]
@@ -42,7 +45,7 @@ revisao-escopo:
 # PubMed recebe filtro systematic[sb]/review[pt]/meta-analysis[pt] automático;
 # a triagem descarta o que não é revisão (relevance_method=nao_e_revisao).
 meta-revisao:
-  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc", "bvs_lilacs"]
+  apis: ["pubmed", "openalex", "semantic_scholar", "europe_pmc"]
   max_results_per_api: 500
   max_final_refs: 100
   year_range: [2010, 2026]
