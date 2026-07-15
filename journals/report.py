@@ -65,7 +65,7 @@ def gerar_relatorio(
     consulta = dados.get("consulta", {})
 
     linhas += [
-        f"# Periódicos-alvo — recomendação de {date.today().isoformat()}",
+        f"# Radar Qualis — recomendação de periódicos de {date.today().isoformat()}",
         "",
         f"**Tema**: {consulta.get('tema', '—')}",
     ]

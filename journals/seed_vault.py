@@ -1,4 +1,10 @@
-"""Semeadura da base a partir da lista curada do vault.
+"""Carrega listas de curadoria do vault para a tabela `curados` ("semear").
+
+TERMINOLOGIA (regra dura, 2026-07-15): o substantivo aqui é sempre
+"lista de curadoria" — NUNCA "semente", que é objeto canônico do vault
+(~/PKM/Sementes/, ideia de publicação) e não pode nomear outro conceito.
+O verbo "semear" para esta ação foi aceito por Raphael; o comando é
+`seed-from-vault`. Ver wiki/sistema/radar-qualis.md §Vocabulário.
 
 Fonte primária: ~/PKM/Notas/Revistas para publicação — IA em saúde.md
 (bullets `- **Nome** — escopo. Taxa .... [Link](url)` sob headers ## A1..A4).
