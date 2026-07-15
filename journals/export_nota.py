@@ -75,7 +75,7 @@ def exportar_nota(conn: sqlite3.Connection, output: Path | None = None) -> int:
         "- Base completa (APC, OA, MEDLINE, categorias Scopus, consolidação): "
         "`~/bin/escrita-tooling/data/journals/periodicos.db` "
         "(`python -m tools journals status`).",
-        "- Recomendações por manuscrito/semente: skill `periodicos-alvo`.",
+        "- Recomendações por manuscrito/semente: skill `radar-qualis`.",
         "- O Qualis 2021-2024 (mostrado como legado em cada item) só classifica "
         "artigos publicados até 2024 — a CAPES descontinuou o Qualis Periódicos.",
         "",

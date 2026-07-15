@@ -1,4 +1,4 @@
-# tools/journals — recomendação de periódicos-alvo
+# tools/journals — Radar Qualis (recomendador de periódicos)
 
 Subsistema para responder **"onde submeter"** um manuscrito/semente/tema.
 
@@ -17,7 +17,7 @@ WoS). Ver `consolidacao.py`.
 
 Tarefa distinta do pipeline de busca de literatura (`tools/`, nível-artigo)
 — aqui a unidade é o periódico (ISSN). Skill que orquestra a parte com LLM:
-`skills/periodicos-alvo/SKILL.md`.
+`skills/radar-qualis/SKILL.md`.
 
 ## Uso
 
@@ -70,8 +70,9 @@ atualizar anualmente (Scimago sai em junho).
 
 O banco é o cache: cada família de campos tem TTL (Qualis ∞; métricas
 365d; DOAJ/APC 180d; snapshots 180d). `enrich` nunca reconsulta dado
-fresco. Scimago: re-ingerir em junho. Dados vivem em
-`data/journals/` (gitignored, exceto o CSV export).
+fresco. Scimago: re-ingerir em junho. O banco `periodicos.db` é a fonte
+única (gitignored, regenerável pelo bootstrap); em `data/journals/` versiona-se
+só as listas de curadoria em markdown (`raw/*.md`).
 
 ## Fontes de dados
 

@@ -1,4 +1,4 @@
-"""Recomendação de periódicos-alvo para submissão (Qualis CAPES).
+"""Radar Qualis — recomendação de periódicos para submissão.
 
 Subpacote independente do pipeline de busca de literatura: aqui a unidade
 é o PERIÓDICO (ISSN), não o artigo. Todo dado volátil carrega proveniência

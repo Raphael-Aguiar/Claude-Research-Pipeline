@@ -13,7 +13,7 @@ from . import db as jdb
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m tools journals",
-        description="Recomendação de periódicos-alvo (Qualis CAPES)",
+        description="Radar Qualis — recomenda periódicos para submissão (Área 22)",
     )
     sub = parser.add_subparsers(dest="command")
 

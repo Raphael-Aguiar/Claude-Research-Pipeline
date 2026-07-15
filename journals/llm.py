@@ -1,7 +1,7 @@
 """Backend LLM opcional para extração local em massa (Ollama).
 
 O caminho padrão de extração é o fan-out de subagentes baratos
-(Haiku/Sonnet) orquestrado pela skill periodicos-alvo via Claude Code —
+(Haiku/Sonnet) orquestrado pela skill radar-qualis via Claude Code —
 zero infraestrutura. Este módulo existe só para re-varreduras em massa
 a custo zero na RTX 4080: JOURNALS_LLM_BACKEND=ollama.
 

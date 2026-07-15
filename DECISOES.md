@@ -36,7 +36,7 @@ Insumo para futura publicação sobre o processo.
 | T14 | 2026-02-19 | JSONL como formato intermediário (pending), JSON como registry | Tudo em JSON | JSONL permite append incremental (1 ref por vez) e processamento linha a linha com tratamento de erros. |
 
 
-## Subsistema de periódicos-alvo (`tools/journals`, 2026-07-11)
+## Radar Qualis — subsistema de recomendação de periódicos (`tools/journals`, 2026-07-11)
 
 Recomendação de onde submeter — tarefa distinta da busca de referências.
 
