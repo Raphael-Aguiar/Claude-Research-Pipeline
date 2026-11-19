@@ -168,7 +168,7 @@ cp tools/config.example.env tools/.env
 
 **Layout de diretórios (modelo híbrido, 2026-05-28):** o código vive em
 `~/bin/escrita-tooling/`; os projetos (textos, `scope.yaml`, outputs
-`pipeline/`) vivem no vault, em `~/PKM/Escrita/<Projeto>/`.
+`pipeline/`) vivem no vault, em `~/.local/state/escrita-tooling/projetos/<Projeto>/`.
 
 
 ## Como usar
@@ -332,6 +332,6 @@ python -m pytest tools/tests/ -v
 
 ## Referências
 
-- Relatório de auditoria que motivou o pipeline: `~/PKM/Escrita/Livro Editora Atheneu/Deep Researches (Antigas)/relatorio-audit-deep-research.md`
+- Relatório de auditoria que motivou o pipeline: `~/.local/state/escrita-tooling/projetos/Livro Editora Atheneu/Deep Researches (Antigas)/relatorio-audit-deep-research.md`
 - Skills que usam este pipeline: `~/bin/escrita-tooling/skills/pesquisa-academica/SKILL.md`, `~/bin/escrita-tooling/skills/revisao-literatura/SKILL.md`
 - Decisões arquiteturais: `~/bin/escrita-tooling/tools/DECISOES.md`
