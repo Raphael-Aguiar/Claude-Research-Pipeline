@@ -1,6 +1,6 @@
 """CLI do Pipeline de Pesquisa Acadêmica.
 
-Subcomandos: run, scope, search, verify, verify-refs, verify-claims, status, export,
+Subcomandos: run, enviar, receber, scope, search, verify, verify-refs, verify-claims, status, export,
 audit, seed, extract, extract-manual, extract-facts, facts-import, facts-status,
 facts-report, facts-crosscheck
 
@@ -39,7 +39,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- run ---
     p_run = subparsers.add_parser("run", help="Executar pipeline completo")
-    p_run.add_argument("project", help="Nome do projeto (pasta em ~/PKM/Escrita/)")
+    p_run.add_argument("project", help="Nome do projeto (pasta de trabalho em ESCRITA_DIR, ver config.py)")
     p_run.add_argument(
         "--modality", "-m",
         choices=[m.value for m in Modality],
@@ -53,6 +53,12 @@ def main(argv: list[str] | None = None) -> int:
         "--to-stage", type=int, default=10,
         help="Parar após a etapa N (default: 10)",
     )
+
+    # --- enviar / receber (Drive do projeto, decisão de Raphael de 19/11/2026) ---
+    p_enviar = subparsers.add_parser("enviar", help="Enviar a pasta de trabalho ao Drive do projeto")
+    p_enviar.add_argument("project", help="Nome do projeto")
+    p_receber = subparsers.add_parser("receber", help="Trazer do Drive o material de trabalho do projeto")
+    p_receber.add_argument("project", help="Nome do projeto")
 
     # --- scope ---
     p_scope = subparsers.add_parser("scope", help="Criar/mostrar scope.yaml")
@@ -240,6 +246,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
+        if args.command in ("enviar", "receber"):
+            from . import drive
+            return getattr(drive, args.command)(args.project)
         if args.command == "run":
             return cmd_run(args)
         elif args.command == "scope":

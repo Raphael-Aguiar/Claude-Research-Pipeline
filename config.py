@@ -10,9 +10,17 @@ import yaml
 from .models import Modality, ResearchAxis, SearchConfig
 
 # Diretórios base
-# Textos/projetos vivem no vault (~/PKM/Escrita); o tooling vive onde este
-# pacote está instalado (~/bin/escrita-tooling) — modelo híbrido de 2026-05-28.
-ESCRITA_DIR = Path.home() / "PKM" / "Escrita"
+# Pasta de trabalho do agente (decisão de Raphael, 19/11/2026): os arquivos de trabalho
+# de cada projeto (scope.yaml, pipeline/, entrega/) ficam aqui, fora das wikis, e ao fim
+# de cada rodada vão para a subpasta "Material de trabalho" do Drive do projeto
+# (`python -m tools enviar <Projeto>`; `receber` traz de volta). Antes de 19/11/2026
+# era ~/PKM/Escrita, no vault do Obsidian.
+ESCRITA_DIR = Path(os.environ.get("ESCRITA_DIR", Path.home() / ".local/state/escrita-tooling/projetos"))
+# O texto em produção mora na Oficina (wiki do Memex, na VPS). Se ele passa a ser
+# escrito na VPS ou numa cópia local depende da ferramenta de escrita, ainda não
+# decidida por Raphael; por ora os comandos leem e gravam o texto pelo caminho único
+# ~/bin/claude-sync/common/scripts/vault-vps.sh get/put "Wiki/Memex/Oficina/<Projeto>/<texto>.md".
+OFICINA_REMOTA = "Wiki/Memex/Oficina"
 TOOLS_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = TOOLS_DIR / "templates"
 
